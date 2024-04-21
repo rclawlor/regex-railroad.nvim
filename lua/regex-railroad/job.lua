@@ -7,7 +7,8 @@ local binary = nil
 local jobids = {}
 
 local function attach(filename)
-    local buf = vim.api.nvim_get_current_buf
+    vim.api.nvim_command('echomsg "Attaching to file"')
+    local buf = vim.api.nvim_get_current_buf()
     local jobid
 
     if binary == nil then
@@ -21,7 +22,7 @@ local function attach(filename)
         binlist = { binary, filename }
     end
 
-    jobid = vim.api.nvim_command.call(
+    jobid = vim.api.nvim_call_function(
         "jobstart",
         {
             binlist,
@@ -35,13 +36,14 @@ local function attach(filename)
         return false
     else
         jobids[buf] = jobid
+        vim.api.nvim_command('echomsg "Found jobid"')
         return true
     end
 end
 
 
 local function detach(buf)
-    buf = buf or vim.api.nvim_get_current_buf
+    buf = buf or vim.api.nvim_get_current_buf()
     local jobid = jobids[buf]
 
     if not jobid then

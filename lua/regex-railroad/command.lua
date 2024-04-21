@@ -1,10 +1,24 @@
+local jobids = require("regex-railroad.job").jobids
+local job = require("regex-railroad.job")
 local command = {}
 local buf
 local win
 
+local function send_msg()
+    vim.api.nvim_command('echomsg "Sending RPC call"')
+    local x = vim.api.nvim_call_function(
+        "rpcnotify",
+        {
+            jobids[buf],
+            "echo",
+            5
+        }
+    )
+end
+
 local function open_window()
     buf = vim.api.nvim_create_buf(false, true) -- create new empty buffer
---    vim.api.nvim_buf_set_option(buf, 'bufhidden', 'wipe')
+    --    vim.api.nvim_buf_set_option(buf, 'bufhidden', 'wipe')
 
     -- get dimensions
     local width = vim.api.nvim_get_option("columns")
@@ -35,6 +49,8 @@ end
 
 local function run_command(args)
     open_window()
+    job.attach()
+    send_msg()
 end
 
 

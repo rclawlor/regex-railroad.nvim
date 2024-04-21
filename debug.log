@@ -1,0 +1,12 @@
+  2024-04-21T11:10:09.037112Z  INFO regex_railroad: Creating event handler
+    at src/main.rs:27
+
+  2024-04-21T11:10:09.037153Z  INFO regex_railroad: Started RPC event loop
+    at src/main.rs:44
+
+  2024-04-21T11:10:09.037260Z  INFO regex_railroad: Received RPC
+    at src/main.rs:46
+
+  2024-04-21T11:10:09.037266Z  INFO regex_railroad: Received echo message
+    at src/main.rs:49
+

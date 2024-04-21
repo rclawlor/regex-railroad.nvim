@@ -1,6 +1,6 @@
 local function locate_binary()
     -- TODO: make function robust
-    return "./target/debug/regex-railroad"
+    return "./target/release/regex-railroad"
 end
 
 -- http://lua-users.org/wiki/FileInputOutput
