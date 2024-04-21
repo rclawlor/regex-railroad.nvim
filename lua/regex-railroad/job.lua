@@ -7,7 +7,6 @@ local binary = nil
 local jobids = {}
 
 local function attach(filename)
-    vim.api.nvim_command('echomsg "Attaching to file"')
     local buf = vim.api.nvim_get_current_buf()
     local jobid
 
@@ -36,7 +35,6 @@ local function attach(filename)
         return false
     else
         jobids[buf] = jobid
-        vim.api.nvim_command('echomsg "Found jobid"')
         return true
     end
 end

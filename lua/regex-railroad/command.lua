@@ -5,8 +5,7 @@ local buf
 local win
 
 local function send_msg()
-    vim.api.nvim_command('echomsg "Sending RPC call"')
-    local x = vim.api.nvim_call_function(
+    vim.api.nvim_call_function(
         "rpcnotify",
         {
             jobids[buf],
@@ -14,11 +13,11 @@ local function send_msg()
             5
         }
     )
+    -- vim.api.nvim_command('wincmd p')
 end
 
 local function open_window()
     buf = vim.api.nvim_create_buf(false, true) -- create new empty buffer
-    --    vim.api.nvim_buf_set_option(buf, 'bufhidden', 'wipe')
 
     -- get dimensions
     local width = vim.api.nvim_get_option("columns")
@@ -44,7 +43,6 @@ local function open_window()
     }
 
     win = vim.api.nvim_open_win(buf, true, opts)
-    -- vim.api.nvim_win_set_option(win, 'cursorline', true) -- it highlight line with the cursor on it
 end
 
 local function run_command(args)

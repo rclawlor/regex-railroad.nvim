@@ -1,7 +1,7 @@
 use neovim_lib::{
     Neovim,
     NeovimApi,
-    Session
+    Session, Value
 };
 use std::{fs::File, sync::Arc};
 use tracing::{info, warn, error};
@@ -46,13 +46,14 @@ impl EventHandler {
             info!("Received RPC");
             match Message::from(event) {
                 Message::Echo => {
-                    info!("Received echo message");
                     let mut nums = value.iter();
                     let p = nums.next().unwrap().as_i64().unwrap();
-                    self.nvim
-                        .command(&format!("echo \"ECHO: {}\"", p))
+                    info!("Received echo message: {}", p);
+                    let buf = self.nvim.get_current_buf().unwrap();
+                    let buf_len = buf.line_count(&mut self.nvim).unwrap();
+                    buf.set_lines(&mut self.nvim, 0, buf_len, true, vec!["Hello, World!".to_string()])
                         .unwrap();
-                },
+               },
                 Message::Unknown(unknown) => {
                     self.nvim
                         .command(&format!("echo \"Unknown command: {}\"", unknown))
