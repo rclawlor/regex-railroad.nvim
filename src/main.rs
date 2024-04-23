@@ -46,12 +46,12 @@ impl EventHandler {
             info!("Received RPC");
             match Message::from(event) {
                 Message::Echo => {
-                    let mut nums = value.iter();
-                    let p = nums.next().unwrap().as_i64().unwrap();
-                    info!("Received echo message: {}", p);
+                    let msg = value[0].as_str().unwrap();
+                    info!("Received echo message: {:?}", value);
                     let buf = self.nvim.get_current_buf().unwrap();
                     let buf_len = buf.line_count(&mut self.nvim).unwrap();
-                    buf.set_lines(&mut self.nvim, 0, buf_len, true, vec!["Hello, World!".to_string()])
+                    let line = self.nvim.get_current_line().unwrap();
+                    buf.set_lines(&mut self.nvim, 0, buf_len, true, vec![msg.to_string()])
                         .unwrap();
                },
                 Message::Unknown(unknown) => {

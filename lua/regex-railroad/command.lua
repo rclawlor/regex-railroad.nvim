@@ -1,19 +1,18 @@
-local jobids = require("regex-railroad.job").jobids
+local jobid = require("regex-railroad.job").jobid
 local job = require("regex-railroad.job")
 local command = {}
 local buf
 local win
 
-local function send_msg()
+local function send_msg(msg, jobid)
     vim.api.nvim_call_function(
         "rpcnotify",
         {
-            jobids[buf],
+            jobid,
             "echo",
-            5
+            msg
         }
     )
-    -- vim.api.nvim_command('wincmd p')
 end
 
 local function open_window()
@@ -43,12 +42,15 @@ local function open_window()
     }
 
     win = vim.api.nvim_open_win(buf, true, opts)
+
+    return buf
 end
 
 local function run_command(args)
-    open_window()
-    job.attach()
-    send_msg()
+    local line = vim.api.nvim_get_current_line()
+    buf = open_window()
+    jobid = job.attach(buf)
+    send_msg(line, jobid)
 end
 
 

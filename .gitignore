@@ -1,5 +1,5 @@
 # Rust application log
-/debug.log
+*.log
 
 # Added by cargo
 
