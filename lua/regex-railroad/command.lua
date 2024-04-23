@@ -1,10 +1,10 @@
-local jobid = require("regex-railroad.job").jobid
 local job = require("regex-railroad.job")
 local command = {}
 local buf
 local win
+local jobid
 
-local function send_msg(msg, jobid)
+local function send_msg(msg)
     vim.api.nvim_call_function(
         "rpcnotify",
         {
@@ -50,7 +50,7 @@ local function run_command(args)
     local line = vim.api.nvim_get_current_line()
     buf = open_window()
     jobid = job.attach(buf)
-    send_msg(line, jobid)
+    send_msg(line)
 end
 
 

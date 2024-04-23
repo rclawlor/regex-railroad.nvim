@@ -1,7 +1,7 @@
 use neovim_lib::{
     Neovim,
     NeovimApi,
-    Session, Value
+    Session
 };
 use std::{fs::File, sync::Arc};
 use tracing::{info, warn, error};
@@ -15,6 +15,17 @@ impl RegexRailroad {
     fn new() -> RegexRailroad {
         RegexRailroad{}
     }
+
+    fn extract_regex(&self, line: &str) -> String {
+        let mut idxs = vec![];
+        for (idx, _) in line.match_indices("\"") {
+            info!("{}", idx);
+            idxs.push(idx);
+        }
+        let regex = line.get(idxs[0] + 1..idxs[1]).unwrap();
+        info!("{}", regex);
+        regex.to_string()
+    }
 }
 
 struct EventHandler {
@@ -25,7 +36,7 @@ struct EventHandler {
 impl EventHandler {
     fn new() -> EventHandler {
         info!("Creating event handler");
-        let mut session = match Session::new_parent() {
+        let session = match Session::new_parent() {
             Ok(session) => session,
             Err(e) => {
                 error!("Couldn't create neovim session {}", e);
@@ -46,14 +57,15 @@ impl EventHandler {
             info!("Received RPC");
             match Message::from(event) {
                 Message::Echo => {
-                    let msg = value[0].as_str().unwrap();
-                    info!("Received echo message: {:?}", value);
+                    // Message sends current line as string
+                    let current_line = value[0].as_str().unwrap();
+                    let regex = self.regex_railroad.extract_regex(current_line);
+                    info!("Received echo message: {:?}", current_line);
                     let buf = self.nvim.get_current_buf().unwrap();
                     let buf_len = buf.line_count(&mut self.nvim).unwrap();
-                    let line = self.nvim.get_current_line().unwrap();
-                    buf.set_lines(&mut self.nvim, 0, buf_len, true, vec![msg.to_string()])
+                    buf.set_lines(&mut self.nvim, 0, buf_len, true, vec![regex])
                         .unwrap();
-               },
+                },
                 Message::Unknown(unknown) => {
                     self.nvim
                         .command(&format!("echo \"Unknown command: {}\"", unknown))
