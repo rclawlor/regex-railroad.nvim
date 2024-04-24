@@ -4,13 +4,13 @@ local buf
 local win
 local jobid
 
-local function send_msg(msg)
+local function send_msg(position, msg)
     vim.api.nvim_call_function(
         "rpcnotify",
         {
             jobid,
             "echo",
-            msg
+            { position, msg }
         }
     )
 end
@@ -48,9 +48,10 @@ end
 
 local function run_command(args)
     local line = vim.api.nvim_get_current_line()
+    local _, col = table.unpack(vim.api.nvim_win_get_cursor(0))
     buf = open_window()
     jobid = job.attach(buf)
-    send_msg(line)
+    send_msg(col, line)
 end
 
 
