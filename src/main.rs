@@ -1,12 +1,30 @@
+use lazy_static::lazy_static;
 use neovim_lib::{
     Neovim,
     NeovimApi,
     Session
 };
-use std::{fs::File, sync::Arc};
+use std::{collections::HashMap, fs::File, sync::Arc};
 use tracing::{info, warn, error};
 use tracing_subscriber::{self, layer::SubscriberExt};
 
+
+lazy_static! {
+    /// Mapping of file extension to the language's escape character
+    static ref ESCAPE_CHARACTER: HashMap<&'static str, &'static str> = HashMap::from([
+        ("py", "\\"),
+        ("rs", "\\")
+    ]);
+}
+
+
+lazy_static! {
+    /// Mapping of file extension to the language's literal string definition
+    static ref LITERAL_STRING: HashMap<&'static str, &'static str> = HashMap::from([
+        ("py", "r"),
+        ("rs", "r")
+    ]);
+}
 struct RegexRailroad {
 
 }
@@ -16,7 +34,24 @@ impl RegexRailroad {
         RegexRailroad{}
     }
 
-    fn extract_regex(&self, position: u64, line: &str) -> String {
+    /// Extract regular expression closes to the cursor
+    fn extract_regex(&self, filename: &str, position: u64, line: &str) -> Result<String, String> {
+        // Find extension of file if it exists
+        let extension = match filename.split(".").last() {
+            Some(extension) => extension,
+            None => {
+                error!("File extension not found");
+                return Err("File extension not found".to_string())
+            }
+        };
+        let escape_character = match ESCAPE_CHARACTER.get(extension) {
+            Some(escape_character) => escape_character,
+            None => {
+                return Err(format!("File extension .{} not supported", extension));
+            }
+        };
+        info!("Found file extension {} with escape character {}", extension, escape_character);
+        // TODO: what if regex contains escaped string character (e.g. \")
         let mut idxs = vec![];
         for (idx, _) in line.match_indices("\"") {
             info!("{}", idx);
@@ -40,7 +75,7 @@ impl RegexRailroad {
         info!("Start: {}  End: {}", start, end);
         let regex = line.get(*start + 1..end).unwrap();
         info!("{}", regex);
-        regex.to_string()
+        Ok(regex.to_string())
     }
 }
 
@@ -75,9 +110,17 @@ impl EventHandler {
                 Message::Echo => {
                     // Message sends index, current line
                     let msg = &value[0];
-                    let position = msg[0].as_u64().unwrap();
-                    let current_line = msg[1].as_str().unwrap();
-                    let regex = self.regex_railroad.extract_regex(position, current_line);
+                    // TODO: handle errors if arguments incorrect
+                    let filename = msg[0].as_str().unwrap();
+                    let position = msg[1].as_u64().unwrap();
+                    let current_line = msg[2].as_str().unwrap();
+                    let regex = match self.regex_railroad.extract_regex(filename, position, current_line) {
+                        Ok(regex) => regex,
+                        Err(e) => {
+                            error!("{}", e);
+                            panic!("{}", e)
+                        }
+                    };
                     info!("Received echo message: {} {:?}", position, current_line);
                     let buf = self.nvim.get_current_buf().unwrap();
                     let buf_len = buf.line_count(&mut self.nvim).unwrap();

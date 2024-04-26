@@ -121,6 +121,7 @@ dependencies = [
 name = "regex-railroad"
 version = "0.1.0"
 dependencies = [
+ "lazy_static",
  "neovim-lib",
  "tracing",
  "tracing-subscriber",
