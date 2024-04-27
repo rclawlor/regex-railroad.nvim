@@ -8,8 +8,8 @@ use tracing_subscriber::{self, layer::SubscriberExt};
 struct StringFormat {
     open: Vec<String>,
     escape_character: String,
-    literal_string_start: Option<Vec<String>>,
-    literal_string_end: Option<Vec<String>>,
+    literal_string_start: Option<String>,
+    literal_string_end: Option<String>,
 }
 
 lazy_static! {
@@ -18,14 +18,14 @@ lazy_static! {
         ("py", StringFormat {
                 open: ["\""].iter().map(|x| x.to_string()).collect(),
                 escape_character: "\\".to_string(),
-                literal_string_start: Some(["r\""].iter().map(|x| x.to_string()).collect()),
-                literal_string_end: Some(["\""].iter().map(|x| x.to_string()).collect()),
+                literal_string_start: Some("r\"".to_string()),
+                literal_string_end: Some("\"".to_string()),
         }),
         ("rs", StringFormat {
                 open: ["\""].iter().map(|x| x.to_string()).collect(),
                 escape_character: "\\".to_string(),
-                literal_string_start: Some(["r\""].iter().map(|x| x.to_string()).collect()),
-                literal_string_end: Some(["\""].iter().map(|x| x.to_string()).collect()),
+                literal_string_start: Some("r\"".to_string()),
+                literal_string_end: Some("\"".to_string()),
         })
     ]);
 }
@@ -39,29 +39,28 @@ impl RegexRailroad {
 
     /// Extract regular expression closes to the cursor
     fn extract_regex(&self, filename: &str, position: u64, line: &str) -> Result<String, String> {
-        // Find extension of file if it exists
-        let extension = match filename.split(".").last() {
-            Some(extension) => {
-                info!("Found file extension '.{}'", extension);
-                extension
-            }
-            None => {
-                error!("File extension not found");
-                return Err("File extension not found".to_string());
-            }
-        };
-        // Find escape character for file type
-        let string_format = match STRING_FORMAT.get(extension) {
-            Some(string_format) => {
-                info!("Found escape character '{:?}'", string_format);
-                string_format
-            }
-            None => {
-                return Err(format!("File extension .{} not supported", extension));
-            }
-        };
+        let extension = self.get_file_extension(filename)?;
+        let string_format = self.get_string_format(&extension)?;
 
         // TODO: what if regex contains escaped string character (e.g. \")
+        // Iterate through line and check for literal string
+        let _test = r"This is a literal string";
+        let windows: Vec<char> = line.chars().collect();
+        if string_format.literal_string_start.is_some() {
+            let str_start = string_format
+                .literal_string_start
+                .as_ref()
+                .expect("Literal string start already checked with '.is_some()'");
+            for (idx, val) in windows.windows(str_start.len()).enumerate() {
+                let substr: String = val.into_iter().collect();
+                if &substr == str_start {
+                    info!(
+                        "Found matching string literal start '{}' at index  '{}'",
+                        substr, idx
+                    );
+                }
+            }
+        }
         let mut idxs = vec![];
         for (idx, _) in line.match_indices("\"") {
             info!("{}", idx);
@@ -92,6 +91,28 @@ impl RegexRailroad {
         let regex = line.get(*start + 1..end).unwrap();
         info!("{}", regex);
         Ok(regex.to_string())
+    }
+
+    /// Parse filename to extract file extension
+    fn get_file_extension(&self, filename: &str) -> Result<String, String> {
+        match filename.split(".").last() {
+            Some(extension) => {
+                info!("Found file extension '.{}'", extension);
+                Ok(extension.to_string())
+            }
+            None => Err("File extension not found".to_string()),
+        }
+    }
+
+    /// Find string characters used for file type
+    fn get_string_format(&self, extension: &str) -> Result<&StringFormat, String> {
+        match STRING_FORMAT.get(extension) {
+            Some(string_format) => {
+                info!("Found escape character '{:?}'", string_format);
+                Ok(string_format)
+            }
+            None => Err(format!("File extension .{} not supported", extension)),
+        }
     }
 }
 
@@ -186,6 +207,7 @@ fn main() {
         tracing_subscriber::fmt::Layer::default()
             .pretty()
             .with_ansi(false)
+            .compact()
             .with_writer(Arc::new(file)),
     );
     tracing::subscriber::set_global_default(subscriber).unwrap();
