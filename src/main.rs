@@ -6,26 +6,26 @@ use tracing_subscriber::{self, layer::SubscriberExt};
 
 #[derive(Debug)]
 struct StringFormat {
-    _open: Vec<String>,
+    string_character: Vec<String>,
     _escape_character: String,
-    literal_string_start: Option<String>,
-    _literal_string_end: Option<String>,
+    literal_string_start: Option<Vec<String>>,
+    literal_string_end: Option<Vec<String>>,
 }
 
 lazy_static! {
     /// Mapping of file extension to the language's string format
     static ref STRING_FORMAT: HashMap<&'static str, StringFormat> = HashMap::from([
         ("py", StringFormat {
-                _open: ["\""].iter().map(|x| x.to_string()).collect(),
+                string_character: ["\""].iter().map(|x| x.to_string()).collect(),
                 _escape_character: "\\".to_string(),
-                literal_string_start: Some("r\"".to_string()),
-                _literal_string_end: Some("\"".to_string()),
+                literal_string_start: Some(["r\""].iter().map(|x| x.to_string()).collect()),
+                literal_string_end: Some(["\""].iter().map(|x| x.to_string()).collect()),
         }),
         ("rs", StringFormat {
-                _open: ["\""].iter().map(|x| x.to_string()).collect(),
+                string_character: ["\""].iter().map(|x| x.to_string()).collect(),
                 _escape_character: "\\".to_string(),
-                literal_string_start: Some("r\"".to_string()),
-                _literal_string_end: Some("\"".to_string()),
+                literal_string_start: Some(["r\""].iter().map(|x| x.to_string()).collect()),
+                literal_string_end: Some(["\""].iter().map(|x| x.to_string()).collect()),
         })
     ]);
 }
@@ -35,62 +35,6 @@ struct RegexRailroad {}
 impl RegexRailroad {
     fn new() -> RegexRailroad {
         RegexRailroad {}
-    }
-
-    /// Extract regular expression closes to the cursor
-    fn extract_regex(&self, filename: &str, position: u64, line: &str) -> Result<String, String> {
-        let extension = self.get_file_extension(filename)?;
-        let string_format = self.get_string_format(&extension)?;
-
-        // TODO: what if regex contains escaped string character (e.g. \")
-        // Iterate through line and check for literal string
-        let _test = r"This is a literal string";
-        let windows: Vec<char> = line.chars().collect();
-        if string_format.literal_string_start.is_some() {
-            let str_start = string_format
-                .literal_string_start
-                .as_ref()
-                .expect("Literal string start already checked with '.is_some()'");
-            for (idx, val) in windows.windows(str_start.len()).enumerate() {
-                let substr: String = val.iter().collect();
-                if &substr == str_start {
-                    info!(
-                        "Found matching string literal start '{}' at index  '{}'",
-                        substr, idx
-                    );
-                }
-            }
-        }
-        let mut idxs = vec![];
-        for (idx, _) in line.match_indices('"') {
-            info!("{}", idx);
-            idxs.push(idx);
-        }
-        info!("{:?}", line.len());
-        let start = idxs
-            .iter()
-            .max_by_key(|x| {
-                if **x <= position.try_into().unwrap() {
-                    **x + 1
-                } else {
-                    0
-                }
-            })
-            .unwrap();
-        let end = *idxs
-            .iter()
-            .min_by_key(|x| {
-                if **x > position.try_into().unwrap() {
-                    **x
-                } else {
-                    line.len()
-                }
-            })
-            .unwrap();
-        info!("Start: {}  End: {}", start, end);
-        let regex = line.get(*start + 1..end).unwrap();
-        info!("{}", regex);
-        Ok(regex.to_string())
     }
 
     /// Parse filename to extract file extension
@@ -113,6 +57,64 @@ impl RegexRailroad {
             }
             None => Err(format!("File extension .{} not supported", extension)),
         }
+    }
+
+    /// Checks if start and end of text is consistent with the language's string specification
+    fn check_string_start_end(&self, text: &str, start: &[String], end: &[String]) -> bool {
+        // Ensure text is long enough to contain start and end characters
+        let text_len = text.len();
+
+        let mut start_present = false;
+        let mut end_present = false;
+
+        for s in start.iter() {
+            if text_len > s.len() {
+                info!("Start: {} - {:?}", &text[0..s.len()], s);
+                start_present = start_present || s.contains(&text[0..start.len()].to_string());
+            }
+        }
+        for e in end.iter() {
+            if text_len > e.len() {
+                info!("End: {} - {:?}", &text[text_len - end.len()..], end);
+                end_present =
+                    end_present || end.contains(&text[text_len - end.len()..].to_string());
+            }
+        }
+        start_present && end_present
+    }
+
+    /// Check if text is a regular expression based on language
+    fn is_regex(&self, filename: &str, text: &str) -> Result<bool, String> {
+        let extension = self.get_file_extension(filename)?;
+        let string_format = self.get_string_format(&extension)?;
+
+        let _test_literal = r"This is a literal string";
+        let _test_normal = "This is a normal string";
+
+        // Iterate through line and check for literal string
+        if string_format.literal_string_start.is_some()
+            && string_format.literal_string_end.is_some()
+        {
+            let str_start = string_format
+                .literal_string_start
+                .as_ref()
+                .expect("Literal string start already checked with '.is_some()'");
+            let str_end = string_format
+                .literal_string_end
+                .as_ref()
+                .expect("Literal string end already checked with '.is_some()'");
+            // Ensure text is long enough to be a valid regex
+            if self.check_string_start_end(text, str_start, str_end) {
+                return Ok(true);
+            }
+        } else {
+            let str_character = string_format.string_character.as_ref();
+            if self.check_string_start_end(text, str_character, str_character) {
+                return Ok(true);
+            }
+        };
+
+        Ok(false)
     }
 }
 
@@ -152,24 +154,29 @@ impl EventHandler {
                     let msg = &value[0];
                     // TODO: handle errors if arguments incorrect
                     let filename = msg[0].as_str().unwrap();
-                    let position = msg[1].as_u64().unwrap();
-                    let current_line = msg[2].as_str().unwrap();
-                    let regex =
-                        match self
-                            .regex_railroad
-                            .extract_regex(filename, position, current_line)
-                        {
-                            Ok(regex) => regex,
-                            Err(e) => {
-                                error!("{}", e);
-                                panic!("{}", e)
-                            }
-                        };
-                    info!("Received echo message: {} {:?}", position, current_line);
+                    let row = msg[1].as_u64().unwrap();
+                    let col = msg[2].as_u64().unwrap();
+                    let _len = msg[3].as_u64().unwrap();
+                    let text = msg[4].as_str().unwrap();
+                    info!("Received message: {}", text);
+                    let is_regex = match self.regex_railroad.is_regex(filename, text) {
+                        Ok(is_regex) => is_regex,
+                        Err(e) => {
+                            error!("{}", e);
+                            panic!("{}", e)
+                        }
+                    };
+                    info!("Received echo message: ({}, {}) {:?}", row, col, text);
                     let buf = self.nvim.get_current_buf().unwrap();
                     let buf_len = buf.line_count(&mut self.nvim).unwrap();
-                    buf.set_lines(&mut self.nvim, 0, buf_len, true, vec![regex])
-                        .unwrap();
+                    buf.set_lines(
+                        &mut self.nvim,
+                        0,
+                        buf_len,
+                        true,
+                        vec![format!("{}", is_regex)],
+                    )
+                    .unwrap();
                 }
                 Message::Unknown(unknown) => {
                     self.nvim

@@ -4,13 +4,13 @@ local buf
 local win
 local jobid
 
-local function send_msg(filename, position, msg)
+local function send_msg(filename, row, col, length, text)
     vim.api.nvim_call_function(
         "rpcnotify",
         {
             jobid,
             "echo",
-            { filename, position, msg }
+            { filename, row, col, length, text }
         }
     )
 end
@@ -47,12 +47,26 @@ local function open_window()
 end
 
 local function run_command(args)
-    local line = vim.api.nvim_get_current_line()
-    local _, col = table.unpack(vim.api.nvim_win_get_cursor(0))
+    -- Use treesitter to extract regex text
+    local line
+    local row
+    local col
+    local length
+
+    local node = vim.treesitter.get_node()
+    if node then
+        row, col, length = node:start()
+        line = vim.treesitter.get_node_text(node, 0)
+    else
+        row = 0
+        col = 0
+        length = 0
+        line = ""
+    end
     local filename = vim.api.nvim_buf_get_name(0)
     buf = open_window()
     jobid = job.attach(buf)
-    send_msg(filename, col, line)
+    send_msg(filename, row, col, length, line)
 end
 
 
