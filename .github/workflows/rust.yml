@@ -16,7 +16,7 @@ jobs:
         steps:
         - uses: actions/checkout@v4
         - name: Lint
-          run: cargo clippy
+          run: cargo clippy -Dwarnings
 
     build:
         runs-on: ubuntu-latest

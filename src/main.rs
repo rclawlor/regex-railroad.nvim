@@ -6,26 +6,26 @@ use tracing_subscriber::{self, layer::SubscriberExt};
 
 #[derive(Debug)]
 struct StringFormat {
-    open: Vec<String>,
-    escape_character: String,
+    _open: Vec<String>,
+    _escape_character: String,
     literal_string_start: Option<String>,
-    literal_string_end: Option<String>,
+    _literal_string_end: Option<String>,
 }
 
 lazy_static! {
     /// Mapping of file extension to the language's string format
     static ref STRING_FORMAT: HashMap<&'static str, StringFormat> = HashMap::from([
         ("py", StringFormat {
-                open: ["\""].iter().map(|x| x.to_string()).collect(),
-                escape_character: "\\".to_string(),
+                _open: ["\""].iter().map(|x| x.to_string()).collect(),
+                _escape_character: "\\".to_string(),
                 literal_string_start: Some("r\"".to_string()),
-                literal_string_end: Some("\"".to_string()),
+                _literal_string_end: Some("\"".to_string()),
         }),
         ("rs", StringFormat {
-                open: ["\""].iter().map(|x| x.to_string()).collect(),
-                escape_character: "\\".to_string(),
+                _open: ["\""].iter().map(|x| x.to_string()).collect(),
+                _escape_character: "\\".to_string(),
                 literal_string_start: Some("r\"".to_string()),
-                literal_string_end: Some("\"".to_string()),
+                _literal_string_end: Some("\"".to_string()),
         })
     ]);
 }
@@ -52,7 +52,7 @@ impl RegexRailroad {
                 .as_ref()
                 .expect("Literal string start already checked with '.is_some()'");
             for (idx, val) in windows.windows(str_start.len()).enumerate() {
-                let substr: String = val.into_iter().collect();
+                let substr: String = val.iter().collect();
                 if &substr == str_start {
                     info!(
                         "Found matching string literal start '{}' at index  '{}'",
@@ -62,7 +62,7 @@ impl RegexRailroad {
             }
         }
         let mut idxs = vec![];
-        for (idx, _) in line.match_indices("\"") {
+        for (idx, _) in line.match_indices('"') {
             info!("{}", idx);
             idxs.push(idx);
         }
@@ -95,7 +95,7 @@ impl RegexRailroad {
 
     /// Parse filename to extract file extension
     fn get_file_extension(&self, filename: &str) -> Result<String, String> {
-        match filename.split(".").last() {
+        match filename.split('.').last() {
             Some(extension) => {
                 info!("Found file extension '.{}'", extension);
                 Ok(extension.to_string())
