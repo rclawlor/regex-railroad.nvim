@@ -1,6 +1,6 @@
 use lazy_static::lazy_static;
 use neovim_lib::{Neovim, NeovimApi, Session};
-use std::{collections::HashMap, fs::File, sync::Arc};
+use std::{collections::HashMap, fmt::Display, fs::File, sync::Arc};
 use tracing::{error, info, warn};
 use tracing_subscriber::{self, layer::SubscriberExt};
 
@@ -24,6 +24,12 @@ enum Language {
     Rust,
     Unknown(String),
     None,
+}
+
+impl Display for Language {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 impl Language {
@@ -80,31 +86,48 @@ impl RegexRailroad {
     }
 
     /// Checks if start and end of text is consistent with the language's string specification
-    fn check_string_start_end(&self, text: &str, start: &[String], end: &[String]) -> bool {
+    fn strip_string_start_end(
+        &self,
+        text: &str,
+        start: &[String],
+        end: &[String],
+    ) -> Option<String> {
         // Ensure text is long enough to contain start and end characters
         let text_len = text.len();
 
         let mut start_present = false;
         let mut end_present = false;
+        let mut max_start_len = 0;
+        let mut max_end_len = 0;
 
         for s in start.iter() {
             if text_len > s.len() {
                 info!("Start: {} - {:?}", &text[0..s.len()], s);
-                start_present = start_present || s.contains(&text[0..start.len()].to_string());
+                if s.contains(&text[0..s.len()].to_string()) {
+                    start_present = true;
+                    max_start_len = std::cmp::max(max_start_len, s.len());
+                }
             }
         }
         for e in end.iter() {
             if text_len > e.len() {
                 info!("End: {} - {:?}", &text[text_len - end.len()..], end);
-                end_present =
-                    end_present || end.contains(&text[text_len - end.len()..].to_string());
+                if end.contains(&text[text_len - e.len()..].to_string()) {
+                    end_present = true;
+                    max_end_len = std::cmp::max(max_end_len, e.len());
+                }
             }
         }
-        start_present && end_present
+        // If text is a potentially valid string return it
+        if start_present && end_present {
+            Some(text[max_start_len..text_len - max_end_len].to_string())
+        } else {
+            None
+        }
     }
 
     /// Check if text is a regular expression based on language
-    fn is_regex(&self, filename: &str, text: &str) -> Result<bool, String> {
+    fn get_regex(&self, filename: &str, text: &str) -> Result<String, String> {
         let language = Language::from_filename(filename);
         let string_format = self.get_string_format(&language)?;
 
@@ -121,19 +144,21 @@ impl RegexRailroad {
                 .as_ref()
                 .expect("Literal string end already checked with '.is_some()'");
             // Ensure text is long enough to be a valid regex
-            if self.check_string_start_end(text, str_start, str_end) {
-                return Ok(true);
+            match self.strip_string_start_end(text, str_start, str_end) {
+                Some(regex) => {
+                    return Ok(regex);
+                }
+                None => (),
             }
         }
         // Not a literal string, lets check for a normal string
-        else {
-            let str_character = string_format.string_character.as_ref();
-            if self.check_string_start_end(text, str_character, str_character) {
-                return Ok(true);
+        let str_character = string_format.string_character.as_ref();
+        match self.strip_string_start_end(text, str_character, str_character) {
+            Some(regex) => {
+                return Ok(regex);
             }
-        };
-
-        Ok(false)
+            None => Err(format!("'{}' is not a valid {} string", text, language)),
+        }
     }
 }
 
@@ -183,8 +208,8 @@ impl EventHandler {
                     let _len = msg[3].as_u64().unwrap();
                     let text = msg[4].as_str().unwrap();
                     info!("Received message: {}", text);
-                    let is_regex = match self.regex_railroad.is_regex(filename, text) {
-                        Ok(is_regex) => is_regex,
+                    let regex = match self.regex_railroad.get_regex(filename, text) {
+                        Ok(regex) => regex,
                         Err(e) => {
                             error!("{}", e);
                             panic!("{}", e)
@@ -193,14 +218,8 @@ impl EventHandler {
                     info!("Received echo message: ({}, {}) {:?}", row, col, text);
                     let buf = self.nvim.get_current_buf().unwrap();
                     let buf_len = buf.line_count(&mut self.nvim).unwrap();
-                    buf.set_lines(
-                        &mut self.nvim,
-                        0,
-                        buf_len,
-                        true,
-                        vec![format!("{}", is_regex)],
-                    )
-                    .unwrap();
+                    buf.set_lines(&mut self.nvim, 0, buf_len, true, vec![format!("{}", regex)])
+                        .unwrap();
                 }
                 Message::Unknown(unknown) => {
                     self.nvim

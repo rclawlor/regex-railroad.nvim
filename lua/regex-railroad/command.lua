@@ -30,6 +30,7 @@ local function open_window()
     buf = vim.api.nvim_create_buf(false, true) -- create new empty buffer
 
     -- get dimensions
+    -- TODO: below functions are deprecated and need replaced
     local width = vim.api.nvim_get_option("columns")
     local height = vim.api.nvim_get_option("lines")
 
@@ -77,11 +78,6 @@ local function run_command(args)
     local filename = vim.api.nvim_buf_get_name(0)
     buf = open_window()
     jobid = job.attach(buf)
-    send_echo("TEST")
-    for child in node:iter_children() do
-        send_echo(vim.treesitter.get_node_text(child, 0))
-    end
-
     parse_regex(filename, row, col, length, line)
 end
 
