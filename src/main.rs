@@ -4,6 +4,11 @@ use std::{collections::HashMap, fs::File, sync::Arc};
 use tracing::{error, info, warn};
 use tracing_subscriber::{self, layer::SubscriberExt};
 
+pub mod parser;
+
+const _TEST_LITERAL: &str = r"This is a literal string";
+const _TEST_NORMAL: &str = "This is a normal string";
+
 #[derive(Debug)]
 struct StringFormat {
     string_character: Vec<String>,
@@ -12,16 +17,40 @@ struct StringFormat {
     literal_string_end: Option<Vec<String>>,
 }
 
+#[derive(Eq, Hash, PartialEq, Debug)]
+enum Language {
+    Python,
+    Rust,
+    Unknown(String),
+    None,
+}
+
+impl Language {
+    fn from_filename(filename: &str) -> Language {
+        match filename.split('.').last() {
+            Some(extension) => {
+                info!("Found file extension '.{}'", extension);
+                match extension {
+                    "py" => Language::Python,
+                    "rs" => Language::Rust,
+                    _ => Language::Unknown(extension.to_string()),
+                }
+            }
+            None => Language::None,
+        }
+    }
+}
+
 lazy_static! {
     /// Mapping of file extension to the language's string format
-    static ref STRING_FORMAT: HashMap<&'static str, StringFormat> = HashMap::from([
-        ("py", StringFormat {
+    static ref STRING_FORMAT: HashMap<Language, StringFormat> = HashMap::from([
+        (Language::Python, StringFormat {
                 string_character: ["\""].iter().map(|x| x.to_string()).collect(),
                 _escape_character: "\\".to_string(),
                 literal_string_start: Some(["r\""].iter().map(|x| x.to_string()).collect()),
                 literal_string_end: Some(["\""].iter().map(|x| x.to_string()).collect()),
         }),
-        ("rs", StringFormat {
+        (Language::Rust, StringFormat {
                 string_character: ["\""].iter().map(|x| x.to_string()).collect(),
                 _escape_character: "\\".to_string(),
                 literal_string_start: Some(["r\""].iter().map(|x| x.to_string()).collect()),
@@ -33,29 +62,19 @@ lazy_static! {
 struct RegexRailroad {}
 
 impl RegexRailroad {
+    /// Create new instance of RegexRailroad
     fn new() -> RegexRailroad {
         RegexRailroad {}
     }
 
-    /// Parse filename to extract file extension
-    fn get_file_extension(&self, filename: &str) -> Result<String, String> {
-        match filename.split('.').last() {
-            Some(extension) => {
-                info!("Found file extension '.{}'", extension);
-                Ok(extension.to_string())
-            }
-            None => Err("File extension not found".to_string()),
-        }
-    }
-
     /// Find string characters used for file type
-    fn get_string_format(&self, extension: &str) -> Result<&StringFormat, String> {
-        match STRING_FORMAT.get(extension) {
+    fn get_string_format(&self, language: &Language) -> Result<&StringFormat, String> {
+        match STRING_FORMAT.get(language) {
             Some(string_format) => {
                 info!("Found escape character '{:?}'", string_format);
                 Ok(string_format)
             }
-            None => Err(format!("File extension .{} not supported", extension)),
+            None => Err(format!("File extension not supported: {:?}", language)),
         }
     }
 
@@ -85,11 +104,8 @@ impl RegexRailroad {
 
     /// Check if text is a regular expression based on language
     fn is_regex(&self, filename: &str, text: &str) -> Result<bool, String> {
-        let extension = self.get_file_extension(filename)?;
-        let string_format = self.get_string_format(&extension)?;
-
-        let _test_literal = r"This is a literal string";
-        let _test_normal = "This is a normal string";
+        let language = Language::from_filename(filename);
+        let string_format = self.get_string_format(&language)?;
 
         // Iterate through line and check for literal string
         if string_format.literal_string_start.is_some()
@@ -107,7 +123,9 @@ impl RegexRailroad {
             if self.check_string_start_end(text, str_start, str_end) {
                 return Ok(true);
             }
-        } else {
+        }
+        // Not a literal string, lets check for a normal string
+        else {
             let str_character = string_format.string_character.as_ref();
             if self.check_string_start_end(text, str_character, str_character) {
                 return Ok(true);
@@ -150,6 +168,11 @@ impl EventHandler {
             info!("Received RPC: {:?}", value);
             match Message::from(event) {
                 Message::Echo => {
+                    let msg = &value[0];
+                    let text = msg[0].as_str().unwrap();
+                    info!("ECHO: {}", text);
+                }
+                Message::ParseRegex => {
                     // Message sends index, current line
                     let msg = &value[0];
                     // TODO: handle errors if arguments incorrect
@@ -191,6 +214,7 @@ impl EventHandler {
 
 enum Message {
     Echo,
+    ParseRegex,
     Unknown(String),
 }
 
@@ -198,6 +222,7 @@ impl From<String> for Message {
     fn from(event: String) -> Self {
         match &event[..] {
             "echo" => Message::Echo,
+            "parseregex" => Message::ParseRegex,
             _ => Message::Unknown(event),
         }
     }

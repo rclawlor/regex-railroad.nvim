@@ -4,13 +4,24 @@ local buf
 local win
 local jobid
 
-local function send_msg(filename, row, col, length, text)
+local function parse_regex(filename, row, col, length, text)
     vim.api.nvim_call_function(
         "rpcnotify",
         {
             jobid,
-            "echo",
+            "parseregex",
             { filename, row, col, length, text }
+        }
+    )
+end
+
+local function send_echo(text)
+   vim.api.nvim_call_function(
+        "rpcnotify",
+        {
+            jobid,
+            "echo",
+            { text }
         }
     )
 end
@@ -66,7 +77,12 @@ local function run_command(args)
     local filename = vim.api.nvim_buf_get_name(0)
     buf = open_window()
     jobid = job.attach(buf)
-    send_msg(filename, row, col, length, line)
+    send_echo("TEST")
+    for child in node:iter_children() do
+        send_echo(vim.treesitter.get_node_text(child, 0))
+    end
+
+    parse_regex(filename, row, col, length, line)
 end
 
 
