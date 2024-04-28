@@ -144,18 +144,15 @@ impl RegexRailroad {
                 .as_ref()
                 .expect("Literal string end already checked with '.is_some()'");
             // Ensure text is long enough to be a valid regex
-            match self.strip_string_start_end(text, str_start, str_end) {
-                Some(regex) => {
-                    return Ok(regex);
-                }
-                None => (),
+            if let Some(regex) = self.strip_string_start_end(text, str_start, str_end) {
+                return Ok(regex);
             }
         }
         // Not a literal string, lets check for a normal string
         let str_character = string_format.string_character.as_ref();
         match self.strip_string_start_end(text, str_character, str_character) {
             Some(regex) => {
-                return Ok(regex);
+                Ok(regex)
             }
             None => Err(format!("'{}' is not a valid {} string", text, language)),
         }

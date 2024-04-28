@@ -96,10 +96,10 @@ impl RegExParser {
                     two_num = true;
                     break;
                 }
-                e @ _ => {
+                unknown => {
                     return Err(format!(
                         "Char '{}' not valid number for repetition group",
-                        e
+                        unknown
                     ));
                 }
             }
@@ -128,10 +128,10 @@ impl RegExParser {
                     };
                     self.consume(num)?;
                 }
-                e @ _ => {
+                unknown => {
                     return Err(format!(
                         "Char '{}' not valid number for repetition group",
-                        e
+                        unknown
                     ));
                 }
             }

@@ -1,13 +1,11 @@
 use crate::parser::RegEx;
 
 pub struct RegExRenderer {
-    tree: RegEx,
+    _tree: RegEx,
 }
 
 impl RegExRenderer {
     pub fn new(tree: RegEx) -> RegExRenderer {
-        RegExRenderer { tree }
+        RegExRenderer { _tree: tree }
     }
-
-    pub fn render(&self) {}
 }
