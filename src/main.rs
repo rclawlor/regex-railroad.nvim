@@ -5,6 +5,7 @@ use tracing::{error, info, warn};
 use tracing_subscriber::{self, layer::SubscriberExt};
 
 pub mod parser;
+pub mod renderer;
 
 const _TEST_LITERAL: &str = r"This is a literal string";
 const _TEST_NORMAL: &str = "This is a normal string";

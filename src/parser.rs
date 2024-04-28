@@ -1,9 +1,17 @@
 #[derive(Eq, PartialEq, Debug)]
 pub enum RegEx {
     Element(Vec<Box<RegEx>>),
-    Repetition(Box<RegEx>),
+    Repetition(RepetitionType, Box<RegEx>),
     Alternation(Box<RegEx>, Box<RegEx>),
     Terminal(char),
+}
+
+#[derive(Eq, PartialEq, Debug)]
+pub enum RepetitionType {
+    OrMore(u32),
+    ZeroOrOne,
+    Exactly(u32),
+    Between(u32, u32),
 }
 
 pub struct RegExParser {
@@ -44,9 +52,18 @@ impl RegExParser {
 
     fn repetition(&mut self) -> Result<RegEx, String> {
         let b = self.group()?;
-        if self.more() && self.peek() == '*' {
-            self.consume('*').unwrap();
-            Ok(RegEx::Repetition(Box::new(b)))
+        if self.more() {
+            match self.peek() {
+                '*' => {
+                    self.consume('*').unwrap();
+                    Ok(RegEx::Repetition(RepetitionType::OrMore(0), Box::new(b)))
+                }
+                '+' => {
+                    self.consume('+').unwrap();
+                    Ok(RegEx::Repetition(RepetitionType::OrMore(1), Box::new(b)))
+                }
+                _ => Ok(b),
+            }
         } else {
             Ok(b)
         }
@@ -97,8 +114,10 @@ impl RegExParser {
 
 #[cfg(test)]
 mod test {
-    use crate::parser::RegEx::{Alternation, Element, Repetition, Terminal};
-    use crate::parser::RegExParser;
+    use crate::parser::{
+        RegEx::{Alternation, Element, Repetition, Terminal},
+        RegExParser, RepetitionType,
+    };
 
     #[test]
     fn test_simple_regex() {
@@ -110,13 +129,29 @@ mod test {
                 Box::new(Element(vec![Box::new(Terminal('b'))]))
             )
         );
-        
+
         let mut parser = RegExParser::new("a*".to_string());
         assert_eq!(
             parser.parse().unwrap(),
-            Element(
-                vec![Box::new(Repetition(Box::new(Terminal('a'))))]
-            )
+            Element(vec![Box::new(Repetition(
+                RepetitionType::OrMore(0),
+                Box::new(Terminal('a'))
+            ))])
+        );
+    }
+
+    #[test]
+    fn test_moderate_regex() {
+        let mut parser = RegExParser::new("(a|b)+".to_string());
+        assert_eq!(
+            parser.parse().unwrap(),
+            Element(vec![Box::new(Repetition(
+                RepetitionType::OrMore(1),
+                Box::new(Alternation(
+                    Box::new(Element(vec![Box::new(Terminal('a'))])),
+                    Box::new(Element(vec![Box::new(Terminal('b'))]))
+                ))
+            ))])
         );
     }
 }
