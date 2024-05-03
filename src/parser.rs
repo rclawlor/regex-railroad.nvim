@@ -21,8 +21,11 @@ pub struct RegExParser {
 
 impl RegExParser {
     /// Create new instance of RegExParser
-    pub fn new(text: String) -> RegExParser {
-        RegExParser { text, idx: 0 }
+    pub fn new(text: &String) -> RegExParser {
+        RegExParser {
+            text: text.to_string(),
+            idx: 0,
+        }
     }
 
     pub fn parse(&mut self) -> Result<RegEx, String> {
@@ -205,7 +208,7 @@ mod test {
 
     #[test]
     fn test_simple_regex() {
-        let mut parser = RegExParser::new("a|b".to_string());
+        let mut parser = RegExParser::new(&"a|b".to_string());
         assert_eq!(
             parser.parse().unwrap(),
             Alternation(
@@ -214,7 +217,7 @@ mod test {
             )
         );
 
-        let mut parser = RegExParser::new("a*".to_string());
+        let mut parser = RegExParser::new(&"a*".to_string());
         assert_eq!(
             parser.parse().unwrap(),
             Element(vec![Box::new(Repetition(
@@ -226,7 +229,7 @@ mod test {
 
     #[test]
     fn test_moderate_regex() {
-        let mut parser = RegExParser::new("(a|b)+".to_string());
+        let mut parser = RegExParser::new(&"(a|b)+".to_string());
         assert_eq!(
             parser.parse().unwrap(),
             Element(vec![Box::new(Repetition(
@@ -241,7 +244,7 @@ mod test {
 
     #[test]
     fn test_hard_regex() {
-        let mut parser = RegExParser::new("a{8}".to_string());
+        let mut parser = RegExParser::new(&"a{8}".to_string());
         assert_eq!(
             parser.parse().unwrap(),
             Element(vec![Box::new(Repetition(
@@ -249,7 +252,7 @@ mod test {
                 Box::new(Terminal('a'))
             ))])
         );
-        let mut parser = RegExParser::new("a{5,}".to_string());
+        let mut parser = RegExParser::new(&"a{5,}".to_string());
         assert_eq!(
             parser.parse().unwrap(),
             Element(vec![Box::new(Repetition(
@@ -258,7 +261,7 @@ mod test {
             ))])
         );
 
-        let mut parser = RegExParser::new("a{1,10}".to_string());
+        let mut parser = RegExParser::new(&"a{1,10}".to_string());
         assert_eq!(
             parser.parse().unwrap(),
             Element(vec![Box::new(Repetition(

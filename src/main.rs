@@ -4,6 +4,8 @@ use std::{collections::HashMap, fmt::Display, fs::File, sync::Arc};
 use tracing::{error, info, warn};
 use tracing_subscriber::{self, layer::SubscriberExt};
 
+use crate::{parser::RegExParser, renderer::RegExRenderer};
+
 pub mod parser;
 pub mod renderer;
 
@@ -151,9 +153,7 @@ impl RegexRailroad {
         // Not a literal string, lets check for a normal string
         let str_character = string_format.string_character.as_ref();
         match self.strip_string_start_end(text, str_character, str_character) {
-            Some(regex) => {
-                Ok(regex)
-            }
+            Some(regex) => Ok(regex),
             None => Err(format!("'{}' is not a valid {} string", text, language)),
         }
     }
@@ -212,7 +212,11 @@ impl EventHandler {
                             panic!("{}", e)
                         }
                     };
-                    info!("Received echo message: ({}, {}) {:?}", row, col, text);
+                    let mut parser = RegExParser::new(&regex);
+                    let parsed_regex = parser.parse().unwrap();
+                    let renderer = RegExRenderer::new();
+                    let text = renderer.render_text(&parsed_regex);
+                    info!(text);
                     let buf = self.nvim.get_current_buf().unwrap();
                     let buf_len = buf.line_count(&mut self.nvim).unwrap();
                     buf.set_lines(&mut self.nvim, 0, buf_len, true, vec![format!("{}", regex)])
