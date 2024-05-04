@@ -226,8 +226,7 @@ impl EventHandler {
                         }
                     };
                     info!("Parsed regular expression: {:?}", parsed_regex);
-                    let renderer = RegExRenderer::new();
-                    let text = renderer.render_text(&parsed_regex);
+                    let text = RegExRenderer::render_text(&parsed_regex);
                     let buf = self.nvim.get_current_buf().unwrap();
                     let buf_len = buf.line_count(&mut self.nvim).unwrap();
                     buf.set_lines(
