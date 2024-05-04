@@ -12,6 +12,7 @@ pub mod renderer;
 const _TEST_LITERAL: &str = r"This is a literal string";
 const _TEST_NORMAL: &str = "(a|b)+hello(cd){5,}";
 const _TEST_CHARACTER: &str = "[^aoeu_]";
+const _TEST_OPTIONS: &str = "(ab|bc|cd)";
 
 #[derive(Debug)]
 struct StringFormat {
@@ -226,19 +227,25 @@ impl EventHandler {
                     };
                     info!("Parsed regular expression: {:?}", parsed_regex);
                     let renderer = RegExRenderer::new();
-                    let _text = renderer.render_text(&parsed_regex);
+                    let text = renderer.render_text(&parsed_regex);
                     let buf = self.nvim.get_current_buf().unwrap();
                     let buf_len = buf.line_count(&mut self.nvim).unwrap();
-                    match buf.set_lines(
+                    buf.set_lines(
                         &mut self.nvim,
                         0,
                         buf_len,
                         true,
                         vec![format!("{:?}", parsed_regex)],
-                    ) {
-                        Ok(_) => (),
-                        Err(e) => warn!("Error setting buffer lines: {}", e),
-                    }
+                    )
+                    .unwrap();
+                    buf.set_lines(
+                        &mut self.nvim,
+                        1,
+                        buf_len,
+                        true,
+                        vec![format!("{}", text.unwrap())],
+                    )
+                    .unwrap();
                 }
                 Message::Unknown(unknown) => {
                     self.nvim

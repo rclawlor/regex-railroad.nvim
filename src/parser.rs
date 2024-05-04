@@ -1,14 +1,14 @@
 use lazy_static::lazy_static;
 
 lazy_static! {
-    static ref SPECIAL_CHARS: Vec<char> = vec!['(', ')', '+', '*', '$', '|', '^'];
+    static ref SPECIAL_CHARS: Vec<char> = vec!['(', ')', '+', '*', '$', '|', '^', '{', '}'];
 }
 
 #[derive(Eq, PartialEq, Debug)]
 pub enum RegEx {
     Element(Vec<Box<RegEx>>),
     Repetition(RepetitionType, Box<RegEx>),
-    Alternation(Box<RegEx>, Box<RegEx>),
+    Alternation(Vec<Box<RegEx>>),
     Character(CharacterType),
     Terminal(String),
 }
@@ -49,13 +49,16 @@ impl RegExParser {
 
     fn alternation(&mut self) -> Result<RegEx, String> {
         let elem1 = self.element()?;
-        // Check for OR
-        if self.more() && self.peek() == '|' {
-            self.consume('|').unwrap();
-            let elem2 = self.element()?;
-            Ok(RegEx::Alternation(Box::new(elem1), Box::new(elem2)))
-        } else {
+        if !self.more() || self.peek() != '|' {
             Ok(elem1)
+        } else {
+            // Check for OR
+            let mut v = vec![Box::new(elem1)];
+            while self.more() && self.peek() == '|' {
+                self.consume('|').unwrap();
+                v.push(Box::new(self.element()?));
+            }
+            Ok(RegEx::Alternation(v))
         }
     }
 
@@ -337,10 +340,10 @@ mod test {
         let mut parser = RegExParser::new(&"a|b".to_string());
         assert_eq!(
             parser.parse().unwrap(),
-            Alternation(
+            Alternation(vec![
                 Box::new(Element(vec![Box::new(Terminal('a'.to_string()))])),
                 Box::new(Element(vec![Box::new(Terminal('b'.to_string()))]))
-            )
+            ])
         );
 
         let mut parser = RegExParser::new(&"a*".to_string());
@@ -360,10 +363,10 @@ mod test {
             parser.parse().unwrap(),
             Element(vec![Box::new(Repetition(
                 RepetitionType::OrMore(1),
-                Box::new(Alternation(
+                Box::new(Alternation(vec![
                     Box::new(Element(vec![Box::new(Terminal('a'.to_string()))])),
                     Box::new(Element(vec![Box::new(Terminal('b'.to_string()))]))
-                ))
+                ]))
             ))])
         );
     }
