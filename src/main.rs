@@ -11,7 +11,7 @@ pub mod renderer;
 
 const _TEST_LITERAL: &str = r"This is a literal string";
 const _TEST_NORMAL: &str = "(a|b)+hello(cd){5,}";
-const _TEST_CHARACTER: &str = "[0-Aa-zA-Z]";
+const _TEST_CHARACTER: &str = "[^aoeu_]";
 
 #[derive(Debug)]
 struct StringFormat {
@@ -201,8 +201,8 @@ impl EventHandler {
                     let msg = &value[0];
                     // TODO: handle errors if arguments incorrect
                     let filename = msg[0].as_str().unwrap();
-                    let row = msg[1].as_u64().unwrap();
-                    let col = msg[2].as_u64().unwrap();
+                    let _row = msg[1].as_u64().unwrap();
+                    let _col = msg[2].as_u64().unwrap();
                     let _len = msg[3].as_u64().unwrap();
                     let text = msg[4].as_str().unwrap();
                     info!("Received message: {}", text);
@@ -210,7 +210,7 @@ impl EventHandler {
                         Ok(regex) => {
                             info!("Received regular expression: {}", regex);
                             regex
-                        },
+                        }
                         Err(e) => {
                             error!("Error retrieving regular expression: {}", e);
                             panic!("{}", e)
@@ -226,10 +226,16 @@ impl EventHandler {
                     };
                     info!("Parsed regular expression: {:?}", parsed_regex);
                     let renderer = RegExRenderer::new();
-                    let text = renderer.render_text(&parsed_regex);
+                    let _text = renderer.render_text(&parsed_regex);
                     let buf = self.nvim.get_current_buf().unwrap();
                     let buf_len = buf.line_count(&mut self.nvim).unwrap();
-                    match buf.set_lines(&mut self.nvim, 0, buf_len, true, vec![format!("{:?}", parsed_regex)]) {
+                    match buf.set_lines(
+                        &mut self.nvim,
+                        0,
+                        buf_len,
+                        true,
+                        vec![format!("{:?}", parsed_regex)],
+                    ) {
                         Ok(_) => (),
                         Err(e) => warn!("Error setting buffer lines: {}", e),
                     }

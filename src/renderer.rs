@@ -36,21 +36,18 @@ impl RegExRenderer {
             RegEx::Alternation(a, b) => {
                 format!("{} or {}", self.render_text(a), self.render_text(b))
             }
-            RegEx::Character(a) => {
-                match a {
-                    CharacterType::Any(b) => {
-                        let mut msg = String::from("");
-                        for i in b.iter() {
-                        } 
-                        msg
-                    },
-                    CharacterType::Not(b) => {
-                        let mut msg = String::from("");
-                        msg
-                    },
-                    _ => "".to_string()
+            RegEx::Character(a) => match a {
+                CharacterType::Any(b) => {
+                    let mut msg = String::from("");
+                    for i in b.iter() {}
+                    msg
                 }
-            }
+                CharacterType::Not(b) => {
+                    let mut msg = String::from("");
+                    msg
+                }
+                _ => "".to_string(),
+            },
             RegEx::Terminal(a) => a.to_string(),
         }
     }

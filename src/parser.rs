@@ -1,9 +1,8 @@
 use lazy_static::lazy_static;
 
 lazy_static! {
-    static ref SPECIAL_CHARS: Vec<char> = vec!['(', ')', '+', '*', '$', '^', '|'];
+    static ref SPECIAL_CHARS: Vec<char> = vec!['(', ')', '+', '*', '$', '|', '^'];
 }
-
 
 #[derive(Eq, PartialEq, Debug)]
 pub enum RegEx {
@@ -27,7 +26,7 @@ pub enum CharacterType {
     Any(Vec<Box<CharacterType>>),
     Not(Vec<Box<CharacterType>>),
     Between(Box<CharacterType>, Box<CharacterType>),
-    Terminal(char)
+    Terminal(char),
 }
 
 pub struct RegExParser {
@@ -178,8 +177,7 @@ impl RegExParser {
             let a = self.alternation()?;
             self.consume(')').unwrap();
             Ok(a)
-        }
-        else if self.peek() == '[' {
+        } else if self.peek() == '[' {
             self.consume('[').unwrap();
             let a = self.character()?;
             self.consume(']').unwrap();
@@ -199,7 +197,7 @@ impl RegExParser {
             self.consume('^').unwrap();
             match_char = false;
         }
-        let mut v = Vec::new(); 
+        let mut v = Vec::new();
         while self.more() && self.peek() != ']' {
             let c = self.next_character()?;
             v.push(c);
@@ -222,9 +220,9 @@ impl RegExParser {
                             self.consume(digit_b).unwrap();
                             CharacterType::Between(
                                 Box::new(CharacterType::Terminal(digit_a)),
-                                Box::new(CharacterType::Terminal(digit_b))
+                                Box::new(CharacterType::Terminal(digit_b)),
                             )
-                        },
+                        }
                         other => {
                             return Err(format!("Invalid character range: [{}-{}]", digit_a, other))
                         }
@@ -232,7 +230,7 @@ impl RegExParser {
                 } else {
                     CharacterType::Terminal(digit_a)
                 }
-            },
+            }
             letter_a @ 'a'..='z' => {
                 self.consume(letter_a).unwrap();
                 if self.peek() == '-' {
@@ -242,17 +240,20 @@ impl RegExParser {
                             self.consume(letter_b).unwrap();
                             CharacterType::Between(
                                 Box::new(CharacterType::Terminal(letter_a)),
-                                Box::new(CharacterType::Terminal(letter_b))
+                                Box::new(CharacterType::Terminal(letter_b)),
                             )
-                        },
+                        }
                         other => {
-                            return Err(format!("Invalid character range: [{}-{}]", letter_a, other))
+                            return Err(format!(
+                                "Invalid character range: [{}-{}]",
+                                letter_a, other
+                            ))
                         }
                     }
                 } else {
                     CharacterType::Terminal(letter_a)
                 }
-            },
+            }
             capital_a @ 'A'..='Z' => {
                 self.consume(capital_a).unwrap();
                 if self.peek() == '-' {
@@ -262,22 +263,31 @@ impl RegExParser {
                             self.consume(capital_b).unwrap();
                             CharacterType::Between(
                                 Box::new(CharacterType::Terminal(capital_a)),
-                                Box::new(CharacterType::Terminal(capital_b))
+                                Box::new(CharacterType::Terminal(capital_b)),
                             )
-                        },
+                        }
                         other => {
-                            return Err(format!("Invalid character range: [{}-{}]", capital_a, other))
+                            return Err(format!(
+                                "Invalid character range: [{}-{}]",
+                                capital_a, other
+                            ))
                         }
                     }
                 } else {
                     CharacterType::Terminal(capital_a)
                 }
             }
-            other => CharacterType::Terminal(other)
+            other => {
+                self.consume(other).unwrap();
+                CharacterType::Terminal(other)
+            }
         };
         if self.peek() == '-' {
             self.consume('-').unwrap();
-            Ok(Box::new(CharacterType::Between(Box::new(c), self.next_character()?)))
+            Ok(Box::new(CharacterType::Between(
+                Box::new(c),
+                self.next_character()?,
+            )))
         } else {
             Ok(Box::new(c))
         }
@@ -328,8 +338,8 @@ mod test {
         assert_eq!(
             parser.parse().unwrap(),
             Alternation(
-                Box::new(Element(vec![Box::new(Terminal('a'))])),
-                Box::new(Element(vec![Box::new(Terminal('b'))]))
+                Box::new(Element(vec![Box::new(Terminal('a'.to_string()))])),
+                Box::new(Element(vec![Box::new(Terminal('b'.to_string()))]))
             )
         );
 
