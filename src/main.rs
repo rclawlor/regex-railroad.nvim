@@ -10,7 +10,8 @@ pub mod parser;
 pub mod renderer;
 
 const _TEST_LITERAL: &str = r"This is a literal string";
-const _TEST_NORMAL: &str = "This is a normal string";
+const _TEST_NORMAL: &str = "(a|b)+hello(cd){5,}";
+const _TEST_CHARACTER: &str = "[0-Aa-zA-Z]";
 
 #[derive(Debug)]
 struct StringFormat {
@@ -206,21 +207,32 @@ impl EventHandler {
                     let text = msg[4].as_str().unwrap();
                     info!("Received message: {}", text);
                     let regex = match self.regex_railroad.get_regex(filename, text) {
-                        Ok(regex) => regex,
+                        Ok(regex) => {
+                            info!("Received regular expression: {}", regex);
+                            regex
+                        },
                         Err(e) => {
-                            error!("{}", e);
+                            error!("Error retrieving regular expression: {}", e);
                             panic!("{}", e)
                         }
                     };
                     let mut parser = RegExParser::new(&regex);
-                    let parsed_regex = parser.parse().unwrap();
+                    let parsed_regex = match parser.parse() {
+                        Ok(parsed_regex) => parsed_regex,
+                        Err(e) => {
+                            error!("Error parsing regular expression: {}", e);
+                            panic!("{}", e)
+                        }
+                    };
+                    info!("Parsed regular expression: {:?}", parsed_regex);
                     let renderer = RegExRenderer::new();
                     let text = renderer.render_text(&parsed_regex);
-                    info!(text);
                     let buf = self.nvim.get_current_buf().unwrap();
                     let buf_len = buf.line_count(&mut self.nvim).unwrap();
-                    buf.set_lines(&mut self.nvim, 0, buf_len, true, vec![format!("{}", regex)])
-                        .unwrap();
+                    match buf.set_lines(&mut self.nvim, 0, buf_len, true, vec![format!("{:?}", parsed_regex)]) {
+                        Ok(_) => (),
+                        Err(e) => warn!("Error setting buffer lines: {}", e),
+                    }
                 }
                 Message::Unknown(unknown) => {
                     self.nvim
