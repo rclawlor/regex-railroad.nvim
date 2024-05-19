@@ -228,8 +228,11 @@ impl EventHandler {
                     info!("Parsed regular expression: {:?}", parsed_regex);
                     let text = RegExRenderer::render_text(&parsed_regex).unwrap();
                     let _diagram = RegExRenderer::render_diagram(&parsed_regex).unwrap();
-                    let b = match self.nvim.call_function("nvim_create_buf", vec![Value::Boolean(false), Value::Boolean(true)]) {
-                        Ok(b) => b,
+                    let buf = match self.nvim.call_function(
+                        "nvim_create_buf",
+                        vec![Value::Boolean(false), Value::Boolean(true)],
+                    ) {
+                        Ok(buf) => buf,
                         Err(e) => {
                             error!("Error creating buffer: {}", e);
                             panic!();
@@ -237,7 +240,10 @@ impl EventHandler {
                     };
                     let win_opts = Value::Map(vec![
                         // Increase height and width by 2 for whitespace padding
-                        (Value::from("width"), Value::from(text.iter().max_by_key(|x| x.len()).unwrap().len() + 2)),
+                        (
+                            Value::from("width"),
+                            Value::from(text.iter().max_by_key(|x| x.len()).unwrap().len() + 2),
+                        ),
                         (Value::from("height"), Value::from(text.len() + 2)),
                         // TODO: allow styles to be set by the user
                         (Value::from("style"), Value::from("minimal")),
@@ -246,24 +252,27 @@ impl EventHandler {
                         (Value::from("row"), Value::from(1)),
                         (Value::from("col"), Value::from(0)),
                     ]);
-                    let win = match self.nvim.call_function("nvim_open_win", vec![b, Value::Boolean(true), win_opts]) {
+                    info!("{:?}", buf);
+                    let win = match self
+                        .nvim
+                        .call_function("nvim_open_win", vec![buf.clone(), Value::Boolean(true), win_opts])
+                    {
                         Ok(win) => win,
                         Err(e) => {
                             error!("Error creating window: {}", e);
                             panic!();
                         }
                     };
-                    let buf = self.nvim.get_current_buf().unwrap();
-                    let buf_len = buf.line_count(&mut self.nvim).unwrap();
+                    info!("Opened window with ID {}", win); 
                     info!("{:?}", parsed_regex);
-                    buf.set_lines(
-                        &mut self.nvim,
-                        1,
-                        buf_len,
-                        true,
-                        text.iter().map(|x| format!(" {} ", x)).collect(),
-                    )
-                    .unwrap();
+                    match self.nvim.call_function(
+                        "nvim_buf_set_lines",
+                        vec![buf, Value::from(1), Value::from(-1), Value::from(true), text.iter().map(|x| format!(" {} ", x)).collect()]
+                    ) {
+                        Ok(_) => (),
+                        Err(e) => error!("Error setting buffer lines: {}", e)
+                    };
+                    info!("Finished");
                 }
                 Message::Unknown(unknown) => {
                     self.nvim

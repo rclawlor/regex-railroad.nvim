@@ -1,6 +1,6 @@
 use lazy_static::lazy_static;
 use std::collections::HashMap;
-use std::ops::Deref; 
+use std::ops::Deref;
 use tracing::error;
 
 use crate::parser::{CharacterType, RegEx, RepetitionType};
@@ -19,11 +19,14 @@ lazy_static! {
         ("CORNER_TR_RND", '╮'),
         ("CORNER_BL_RND", '╰'),
         ("CORNER_BR_RND", '╯')
-    ].iter().copied().collect();
+    ]
+    .iter()
+    .copied()
+    .collect();
 }
 
 pub struct RegExRenderer {
-    diagram: Vec<String>
+    diagram: Vec<String>,
 }
 
 impl Default for RegExRenderer {
@@ -34,7 +37,9 @@ impl Default for RegExRenderer {
 
 impl RegExRenderer {
     pub fn new() -> RegExRenderer {
-        RegExRenderer { diagram: vec![String::new()]}
+        RegExRenderer {
+            diagram: vec![String::new()],
+        }
     }
 
     pub fn render_diagram(tree: &RegEx) -> Result<Vec<Vec<String>>, String> {
@@ -43,8 +48,8 @@ impl RegExRenderer {
             RegEx::Element(a) => {
                 for i in a.iter() {
                     msg.push(RegExRenderer::render_diagram_element()?);
-                };
-            },
+                }
+            }
             other => {
                 error!("Expected RegEx::Element, received {:?}", other);
                 panic!("Expected RegEx::Element, received {:?}", other);
@@ -54,7 +59,7 @@ impl RegExRenderer {
     }
 
     fn render_diagram_element() -> Result<Vec<String>, String> {
-        Ok(vec![]) 
+        Ok(vec![])
     }
 
     pub fn render_text(tree: &RegEx) -> Result<Vec<String>, String> {
@@ -63,8 +68,8 @@ impl RegExRenderer {
             RegEx::Element(a) => {
                 for i in a.iter() {
                     msg.push(RegExRenderer::render_text_element(i)?);
-                };
-            },
+                }
+            }
             other => {
                 error!("Expected RegEx::Element, received {:?}", other);
                 panic!("Expected RegEx::Element, received {:?}", other);
