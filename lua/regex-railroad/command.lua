@@ -4,16 +4,28 @@ local buf
 local win
 local jobid
 
-local function parse_regex(filename, row, col, length, text)
+local function regex_railroad(filename, row, col, length, text)
     vim.api.nvim_call_function(
         "rpcnotify",
         {
             jobid,
-            "parseregex",
+            "regexrailroad",
             { filename, row, col, length, text }
         }
     )
 end
+
+local function regex_text(filename, row, col, length, text)
+    vim.api.nvim_call_function(
+        "rpcnotify",
+        {
+            jobid,
+            "regextext",
+            { filename, row, col, length, text }
+        }
+    )
+end
+
 
 local function send_echo(text)
    vim.api.nvim_call_function(
@@ -58,7 +70,7 @@ local function open_window()
     return buf
 end
 
-local function run_command(args)
+function command.run_diagram_command(args)
     -- Use treesitter to extract regex text
     local line
     local row
@@ -78,13 +90,30 @@ local function run_command(args)
     local filename = vim.api.nvim_buf_get_name(0)
     buf = open_window()
     jobid = job.attach(buf)
-    parse_regex(filename, row, col, length, line)
+    regex_railroad(filename, row, col, length, line)
 end
 
+function command.run_text_command(args)
+    -- Use treesitter to extract regex text
+    local line
+    local row
+    local col
+    local length
 
-function command.load_command(cmd, ...)
-    local args = { ... }
-    run_command(args)
+    local node = vim.treesitter.get_node()
+    if node then
+        row, col, length = node:start()
+        line = vim.treesitter.get_node_text(node, 0)
+    else
+        row = 0
+        col = 0
+        length = 0
+        line = ""
+    end
+    local filename = vim.api.nvim_buf_get_name(0)
+    buf = open_window()
+    jobid = job.attach(buf)
+    regex_text(filename, row, col, length, line)
 end
 
 return command

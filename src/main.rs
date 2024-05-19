@@ -192,12 +192,12 @@ impl EventHandler {
         for (event, value) in receiver {
             info!("Received RPC: {:?}", value);
             match Message::from(event) {
-                Message::Echo => {
+                Message::RegexRailroad => {
                     let msg = &value[0];
                     let text = msg[0].as_str().unwrap();
                     info!("ECHO: {}", text);
                 }
-                Message::ParseRegex => {
+                Message::RegexText => {
                     // Message sends index, current line
                     let msg = &value[0];
                     // TODO: handle errors if arguments incorrect
@@ -226,9 +226,8 @@ impl EventHandler {
                         }
                     };
                     info!("Parsed regular expression: {:?}", parsed_regex);
-                    let mut renderer = RegExRenderer::new();
                     let text = RegExRenderer::render_text(&parsed_regex).unwrap();
-                    let _diagram = renderer.render_diagram(&parsed_regex).unwrap();
+                    let _diagram = RegExRenderer::render_diagram(&parsed_regex).unwrap();
                     let buf = self.nvim.get_current_buf().unwrap();
                     let buf_len = buf.line_count(&mut self.nvim).unwrap();
                     buf.set_lines(
@@ -260,16 +259,16 @@ impl EventHandler {
 }
 
 enum Message {
-    Echo,
-    ParseRegex,
+    RegexRailroad,
+    RegexText,
     Unknown(String),
 }
 
 impl From<String> for Message {
     fn from(event: String) -> Self {
         match &event[..] {
-            "echo" => Message::Echo,
-            "parseregex" => Message::ParseRegex,
+            "regexrailroad" => Message::RegexRailroad,
+            "regextext" => Message::RegexText,
             _ => Message::Unknown(event),
         }
     }

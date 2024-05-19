@@ -37,17 +37,12 @@ impl RegExRenderer {
         RegExRenderer { diagram: vec![String::new()]}
     }
 
-    pub fn render_diagram(&mut self, _tree: &RegEx) -> Result<&Vec<String>, String> {
-        self.diagram[0] = DRAWING_CHARS["START"].to_string();
-        Ok(&self.diagram)
-    }
-
-    pub fn render_text(tree: &RegEx) -> Result<Vec<String>, String> {
+    pub fn render_diagram(tree: &RegEx) -> Result<Vec<Vec<String>>, String> {
         let mut msg = Vec::new();
         match tree {
             RegEx::Element(a) => {
                 for i in a.iter() {
-                    msg.push(RegExRenderer::render_element(i)?);
+                    msg.push(RegExRenderer::render_diagram_element()?);
                 };
             },
             other => {
@@ -58,33 +53,53 @@ impl RegExRenderer {
         Ok(msg)
     }
 
-    pub fn render_element(tree: &RegEx) -> Result<String, String> {
+    fn render_diagram_element() -> Result<Vec<String>, String> {
+        Ok(vec![]) 
+    }
+
+    pub fn render_text(tree: &RegEx) -> Result<Vec<String>, String> {
+        let mut msg = Vec::new();
+        match tree {
+            RegEx::Element(a) => {
+                for i in a.iter() {
+                    msg.push(RegExRenderer::render_text_element(i)?);
+                };
+            },
+            other => {
+                error!("Expected RegEx::Element, received {:?}", other);
+                panic!("Expected RegEx::Element, received {:?}", other);
+            }
+        }
+        Ok(msg)
+    }
+
+    fn render_text_element(tree: &RegEx) -> Result<String, String> {
         match tree {
             RegEx::Element(a) => {
                 let mut msg = "".to_string();
                 for i in a.iter() {
-                    msg = format!("{}{}", msg, Self::render_element(i.deref())?)
+                    msg = format!("{}{}", msg, Self::render_text_element(i.deref())?)
                 }
                 Ok(msg)
             }
             RegEx::Repetition(t, a) => {
                 match t {
-                    RepetitionType::ZeroOrOne => Ok(format!("{}: 0 or 1", Self::render_element(a)?)),
+                    RepetitionType::ZeroOrOne => Ok(format!("{}: 0 or 1", Self::render_text_element(a)?)),
                     RepetitionType::OrMore(n) => {
-                        Ok(format!("{} or more '{}'", n, Self::render_element(a)?))
+                        Ok(format!("{} or more '{}'", n, Self::render_text_element(a)?))
                     }
                     RepetitionType::Exactly(n) => {
-                        Ok(format!("Exactly {} '{}'", n, Self::render_element(a)?))
+                        Ok(format!("Exactly {} '{}'", n, Self::render_text_element(a)?))
                     }
                     RepetitionType::Between(n, m) => {
-                        Ok(format!("Between {} and {} '{}'", n, m, Self::render_element(a)?))
+                        Ok(format!("Between {} and {} '{}'", n, m, Self::render_text_element(a)?))
                     }
                 }
             }
             RegEx::Alternation(a) => {
-                let mut msg = Self::render_element(a.first().unwrap())?;
+                let mut msg = Self::render_text_element(a.first().unwrap())?;
                 for i in a.iter().skip(1) {
-                    msg = format!("{} or {}", msg, Self::render_element(i)?);
+                    msg = format!("{} or {}", msg, Self::render_text_element(i)?);
                 }
                 Ok(msg)
             }
