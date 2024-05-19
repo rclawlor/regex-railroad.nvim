@@ -228,7 +228,7 @@ impl EventHandler {
                     info!("Parsed regular expression: {:?}", parsed_regex);
                     let mut renderer = RegExRenderer::new();
                     let text = RegExRenderer::render_text(&parsed_regex).unwrap();
-                    let diagram = renderer.render_diagram(&parsed_regex).unwrap();
+                    let _diagram = renderer.render_diagram(&parsed_regex).unwrap();
                     let buf = self.nvim.get_current_buf().unwrap();
                     let buf_len = buf.line_count(&mut self.nvim).unwrap();
                     buf.set_lines(

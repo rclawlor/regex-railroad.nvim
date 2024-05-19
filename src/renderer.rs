@@ -1,7 +1,7 @@
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::ops::Deref; 
-use tracing::{info, error};
+use tracing::error;
 
 use crate::parser::{CharacterType, RegEx, RepetitionType};
 
@@ -37,7 +37,7 @@ impl RegExRenderer {
         RegExRenderer { diagram: vec![String::new()]}
     }
 
-    pub fn render_diagram(&mut self, tree: &RegEx) -> Result<&Vec<String>, String> {
+    pub fn render_diagram(&mut self, _tree: &RegEx) -> Result<&Vec<String>, String> {
         self.diagram[0] = DRAWING_CHARS["START"].to_string();
         Ok(&self.diagram)
     }
