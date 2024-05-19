@@ -111,7 +111,7 @@ function command.run_text_command(args)
         line = ""
     end
     local filename = vim.api.nvim_buf_get_name(0)
-    buf = open_window()
+    local current_buf = vim.api.nvim_get_current_buf()
     jobid = job.attach(buf)
     regex_text(filename, row, col, length, line)
 end

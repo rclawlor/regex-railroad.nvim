@@ -1,5 +1,5 @@
 use lazy_static::lazy_static;
-use neovim_lib::{Neovim, NeovimApi, Session};
+use neovim_lib::{Neovim, NeovimApi, Session, Value};
 use std::{collections::HashMap, fmt::Display, fs::File, sync::Arc};
 use tracing::{error, info, warn};
 use tracing_subscriber::{self, layer::SubscriberExt};
@@ -228,22 +228,40 @@ impl EventHandler {
                     info!("Parsed regular expression: {:?}", parsed_regex);
                     let text = RegExRenderer::render_text(&parsed_regex).unwrap();
                     let _diagram = RegExRenderer::render_diagram(&parsed_regex).unwrap();
+                    let b = match self.nvim.call_function("nvim_create_buf", vec![Value::Boolean(false), Value::Boolean(true)]) {
+                        Ok(b) => b,
+                        Err(e) => {
+                            error!("Error creating buffer: {}", e);
+                            panic!();
+                        }
+                    };
+                    let win_opts = Value::Map(vec![
+                        // Increase height and width by 2 for whitespace padding
+                        (Value::from("width"), Value::from(text.iter().max_by_key(|x| x.len()).unwrap().len() + 2)),
+                        (Value::from("height"), Value::from(text.len() + 2)),
+                        // TODO: allow styles to be set by the user
+                        (Value::from("style"), Value::from("minimal")),
+                        (Value::from("relative"), Value::from("cursor")),
+                        // Slight offset for readability
+                        (Value::from("row"), Value::from(1)),
+                        (Value::from("col"), Value::from(0)),
+                    ]);
+                    let win = match self.nvim.call_function("nvim_open_win", vec![b, Value::Boolean(true), win_opts]) {
+                        Ok(win) => win,
+                        Err(e) => {
+                            error!("Error creating window: {}", e);
+                            panic!();
+                        }
+                    };
                     let buf = self.nvim.get_current_buf().unwrap();
                     let buf_len = buf.line_count(&mut self.nvim).unwrap();
-                    buf.set_lines(
-                        &mut self.nvim,
-                        0,
-                        buf_len,
-                        true,
-                        vec![format!("{:?}", parsed_regex)],
-                    )
-                    .unwrap();
+                    info!("{:?}", parsed_regex);
                     buf.set_lines(
                         &mut self.nvim,
                         1,
                         buf_len,
                         true,
-                        vec![format!("{:?}", text)],
+                        text.iter().map(|x| format!(" {} ", x)).collect(),
                     )
                     .unwrap();
                 }
