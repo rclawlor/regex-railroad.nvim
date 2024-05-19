@@ -11,7 +11,7 @@ pub mod renderer;
 
 const _TEST_LITERAL: &str = r"This is a literal string";
 const _TEST_NORMAL: &str = "(a|b)+hello(cd){5,}";
-const _TEST_CHARACTER: &str = "[^aoeu_]";
+const _TEST_CHARACTER: &str = "[^aoeu_0-9]";
 const _TEST_OPTIONS: &str = "(ab|bc|cd)";
 
 #[derive(Debug)]
@@ -226,7 +226,9 @@ impl EventHandler {
                         }
                     };
                     info!("Parsed regular expression: {:?}", parsed_regex);
-                    let text = RegExRenderer::render_text(&parsed_regex);
+                    let mut renderer = RegExRenderer::new();
+                    let text = RegExRenderer::render_text(&parsed_regex).unwrap();
+                    let diagram = renderer.render_diagram(&parsed_regex).unwrap();
                     let buf = self.nvim.get_current_buf().unwrap();
                     let buf_len = buf.line_count(&mut self.nvim).unwrap();
                     buf.set_lines(
@@ -242,7 +244,7 @@ impl EventHandler {
                         1,
                         buf_len,
                         true,
-                        vec![format!("{}", text.unwrap())],
+                        vec![format!("{:?}", text)],
                     )
                     .unwrap();
                 }

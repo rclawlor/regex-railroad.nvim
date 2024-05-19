@@ -1,8 +1,30 @@
-use std::ops::Deref;
+use lazy_static::lazy_static;
+use std::collections::HashMap;
+use std::ops::Deref; 
+use tracing::{info, error};
 
 use crate::parser::{CharacterType, RegEx, RepetitionType};
 
-pub struct RegExRenderer {}
+lazy_static! {
+    static ref DRAWING_CHARS: HashMap<&'static str, char> = [
+        ("START", '╟'),
+        ("END", '╢'),
+        ("LINE_HORZ", '─'),
+        ("LINE_VERT", '│'),
+        ("CORNER_TL_SQR", '┌'),
+        ("CORNER_TR_SQR", '┐'),
+        ("CORNER_BL_SQR", '└'),
+        ("CORNER_BR_SQR", '┘'),
+        ("CORNER_TL_RND", '╭'),
+        ("CORNER_TR_RND", '╮'),
+        ("CORNER_BL_RND", '╰'),
+        ("CORNER_BR_RND", '╯')
+    ].iter().copied().collect();
+}
+
+pub struct RegExRenderer {
+    diagram: Vec<String>
+}
 
 impl Default for RegExRenderer {
     fn default() -> Self {
@@ -12,36 +34,57 @@ impl Default for RegExRenderer {
 
 impl RegExRenderer {
     pub fn new() -> RegExRenderer {
-        RegExRenderer {}
+        RegExRenderer { diagram: vec![String::new()]}
     }
 
-    pub fn render_text(tree: &RegEx) -> Result<String, String> {
+    pub fn render_diagram(&mut self, tree: &RegEx) -> Result<&Vec<String>, String> {
+        self.diagram[0] = DRAWING_CHARS["START"].to_string();
+        Ok(&self.diagram)
+    }
+
+    pub fn render_text(tree: &RegEx) -> Result<Vec<String>, String> {
+        let mut msg = Vec::new();
+        match tree {
+            RegEx::Element(a) => {
+                for i in a.iter() {
+                    msg.push(RegExRenderer::render_element(i)?);
+                };
+            },
+            other => {
+                error!("Expected RegEx::Element, received {:?}", other);
+                panic!("Expected RegEx::Element, received {:?}", other);
+            }
+        }
+        Ok(msg)
+    }
+
+    pub fn render_element(tree: &RegEx) -> Result<String, String> {
         match tree {
             RegEx::Element(a) => {
                 let mut msg = "".to_string();
                 for i in a.iter() {
-                    msg = format!("{}{}", msg, Self::render_text(i.deref())?)
+                    msg = format!("{}{}", msg, Self::render_element(i.deref())?)
                 }
                 Ok(msg)
             }
             RegEx::Repetition(t, a) => {
                 match t {
-                    RepetitionType::ZeroOrOne => Ok(format!("{}: 0 or 1", Self::render_text(a)?)),
+                    RepetitionType::ZeroOrOne => Ok(format!("{}: 0 or 1", Self::render_element(a)?)),
                     RepetitionType::OrMore(n) => {
-                        Ok(format!("{}: {} or more", Self::render_text(a)?, n))
+                        Ok(format!("{} or more '{}'", n, Self::render_element(a)?))
                     }
                     RepetitionType::Exactly(n) => {
-                        Ok(format!("{}: Exactly {}", Self::render_text(a)?, n))
+                        Ok(format!("Exactly {} '{}'", n, Self::render_element(a)?))
                     }
                     RepetitionType::Between(n, m) => {
-                        Ok(format!("{}: Between {} and {}", Self::render_text(a)?, n, m))
+                        Ok(format!("Between {} and {} '{}'", n, m, Self::render_element(a)?))
                     }
                 }
             }
             RegEx::Alternation(a) => {
-                let mut msg = Self::render_text(a.first().unwrap())?;
+                let mut msg = Self::render_element(a.first().unwrap())?;
                 for i in a.iter().skip(1) {
-                    msg = format!("{} or {}", msg, Self::render_text(i)?);
+                    msg = format!("{} or {}", msg, Self::render_element(i)?);
                 }
                 Ok(msg)
             }
@@ -69,7 +112,7 @@ impl RegExRenderer {
     fn render_character(character: &CharacterType) -> Result<String, String> {
         match character {
             CharacterType::Between(a, b) => Ok(format!(
-                "{}{}",
+                "{} to {}",
                 Self::render_character(a)?,
                 Self::render_character(b)?
             )),
