@@ -67,7 +67,18 @@ impl RegExRenderer {
         match tree {
             RegEx::Element(a) => {
                 for i in a.iter() {
-                    msg.push(RegExRenderer::render_text_element(i)?);
+                    match **i {
+                        RegEx::Terminal(_) => {
+                            msg.push("EXACTLY:".to_string());
+                            msg.push(format!("    {}", RegExRenderer::render_text_element(i)?))
+                        },
+                        _ => {
+                            let newmsg = RegExRenderer::render_text_element(i)?;
+                            for submsg in newmsg.split("\n").into_iter() {
+                                msg.push(submsg.to_string());
+                            }
+                        }
+                    }
                 }
             }
             other => {
@@ -91,20 +102,20 @@ impl RegExRenderer {
                 match t {
                     RepetitionType::ZeroOrOne => Ok(format!("{}: 0 or 1", Self::render_text_element(a)?)),
                     RepetitionType::OrMore(n) => {
-                        Ok(format!("{} or more '{}'", n, Self::render_text_element(a)?))
+                        Ok(format!("{} OR MORE:\n    {}", n, Self::render_text_element(a)?))
                     }
                     RepetitionType::Exactly(n) => {
-                        Ok(format!("Exactly {} '{}'", n, Self::render_text_element(a)?))
+                        Ok(format!("EXACTLY {}:\n    {}", n, Self::render_text_element(a)?))
                     }
                     RepetitionType::Between(n, m) => {
-                        Ok(format!("Between {} and {} '{}'", n, m, Self::render_text_element(a)?))
+                        Ok(format!("BETWEEN {} AND {}:\n    {}", n, m, Self::render_text_element(a)?))
                     }
                 }
             }
             RegEx::Alternation(a) => {
-                let mut msg = Self::render_text_element(a.first().unwrap())?;
+                let mut msg = format!("{}", Self::render_text_element(a.first().unwrap())?);
                 for i in a.iter().skip(1) {
-                    msg = format!("{} or {}", msg, Self::render_text_element(i)?);
+                    msg = format!("{} OR {}", msg, Self::render_text_element(i)?);
                 }
                 Ok(msg)
             }
@@ -125,7 +136,7 @@ impl RegExRenderer {
                 }
                 _ => Err("Invalid parsing: RegEx::Character cannot begin with CharacterType::Between or CharacterType::Terminal".to_string()),
             },
-            RegEx::Terminal(a) => Ok(a.to_string())
+            RegEx::Terminal(a) => Ok(format!("'{}'", a))
         }
     }
 

@@ -267,11 +267,26 @@ impl EventHandler {
                     info!("{:?}", parsed_regex);
                     match self.nvim.call_function(
                         "nvim_buf_set_lines",
-                        vec![buf, Value::from(1), Value::from(-1), Value::from(true), text.iter().map(|x| format!(" {} ", x)).collect()]
+                        vec![buf.clone(), Value::from(1), Value::from(-1), Value::from(true), text.iter().map(|x| format!(" {} ", x)).collect()]
                     ) {
                         Ok(_) => (),
                         Err(e) => error!("Error setting buffer lines: {}", e)
                     };
+                    self.nvim.call_function(
+                        "nvim_set_hl",
+                        vec![
+                            Value::from(0),
+                            Value::from("RegexHighlight"),
+                            Value::Map(vec![
+                                (Value::from("fg"), Value::from("#123456")),
+                                (Value::from("bold"), Value::from(true))
+                            ])
+                        ]
+                    ).unwrap();
+                    self.nvim.call_function(
+                        "nvim_buf_add_highlight",
+                        vec![buf, Value::from(0), Value::from("RegexHighlight"), Value::from(2), Value::from(0), Value::from(-1)]
+                    ).unwrap();
                     info!("Finished");
                 }
                 Message::Unknown(unknown) => {
