@@ -26,7 +26,7 @@ lazy_static! {
 }
 
 pub struct RegExRenderer {
-    diagram: Vec<String>,
+    _diagram: Vec<String>,
 }
 
 impl Default for RegExRenderer {
@@ -38,7 +38,7 @@ impl Default for RegExRenderer {
 impl RegExRenderer {
     pub fn new() -> RegExRenderer {
         RegExRenderer {
-            diagram: vec![String::new()],
+            _diagram: vec![String::new()],
         }
     }
 
@@ -46,7 +46,7 @@ impl RegExRenderer {
         let mut msg = Vec::new();
         match tree {
             RegEx::Element(a) => {
-                for i in a.iter() {
+                for _i in a.iter() {
                     msg.push(RegExRenderer::render_diagram_element()?);
                 }
             }
@@ -74,7 +74,7 @@ impl RegExRenderer {
                         },
                         _ => {
                             let newmsg = RegExRenderer::render_text_element(i)?;
-                            for submsg in newmsg.split("\n").into_iter() {
+                            for submsg in newmsg.split('\n') {
                                 msg.push(submsg.to_string());
                             }
                         }
@@ -113,7 +113,7 @@ impl RegExRenderer {
                 }
             }
             RegEx::Alternation(a) => {
-                let mut msg = format!("{}", Self::render_text_element(a.first().unwrap())?);
+                let mut msg = Self::render_text_element(a.first().unwrap())?.to_string();
                 for i in a.iter().skip(1) {
                     msg = format!("{} OR {}", msg, Self::render_text_element(i)?);
                 }

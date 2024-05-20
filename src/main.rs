@@ -276,17 +276,6 @@ impl EventHandler {
                         Err(e) => error!("Error setting buffer lines: {}", e)
                     };
                     self.nvim.call_function(
-                        "nvim_set_hl",
-                        vec![
-                            Value::from(0),
-                            Value::from("RegexHighlight"),
-                            Value::Map(vec![
-                                (Value::from("fg"), Value::from("#123456")),
-                                (Value::from("bold"), Value::from(true))
-                            ])
-                        ]
-                    ).unwrap();
-                    self.nvim.call_function(
                         "nvim_buf_add_highlight",
                         vec![buf, Value::from(0), Value::from("RegexHighlight"), Value::from(2), Value::from(0), Value::from(-1)]
                     ).unwrap();
