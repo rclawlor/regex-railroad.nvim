@@ -141,7 +141,7 @@ function M.run_diagram_command()
     end
     local filename = vim.api.nvim_buf_get_name(0)
     local current_buf = vim.api.nvim_get_current_buf()
-    jobid = job.attach(current_buf)
+    jobid = job.attach(filename)
     regex_railroad(filename, line)
 end
 
@@ -170,10 +170,10 @@ function M.run_text_command()
     local current_buf = vim.api.nvim_get_current_buf()
     local current_win = vim.api.nvim_get_current_win()
 
-    jobid = job.attach(current_buf)
+    jobid = job.attach(filename)
     regex_text(filename, line)
 
     win_open_autocmd(current_win, current_buf)
 end
 
-return command
+return M

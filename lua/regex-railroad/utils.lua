@@ -18,7 +18,7 @@ local function file_exists(file)
     return f ~= nil
 end
 
--- get all lines from a file, returns an empty 
+-- get all lines from a file, returns an empty
 -- list/table if the file does not exist
 function M.lines_from_file(file)
     if not file_exists(file) then

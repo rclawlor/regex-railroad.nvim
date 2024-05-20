@@ -16,5 +16,9 @@ jobs:
         steps:
         - uses: actions/checkout@v4
         - name: Lint
-          uses: lunarmodules/luacheck@v1
+          run: |
+            sudo apt-get update
+            sudo apt-get install -y luarocks
+            sudo luarocks install luacheck
+            luacheck --globals vim -- .
 
