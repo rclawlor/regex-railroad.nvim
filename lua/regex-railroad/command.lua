@@ -140,7 +140,6 @@ function M.run_diagram_command()
         line = ""
     end
     local filename = vim.api.nvim_buf_get_name(0)
-    local current_buf = vim.api.nvim_get_current_buf()
     jobid = job.attach(filename)
     regex_railroad(filename, line)
 end

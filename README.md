@@ -1,6 +1,8 @@
 # regex-railroad.nvim
 
 ![rust workflow](https://github.com/rclawlor/regex-railroad.nvim/actions/workflows/rust.yml/badge.svg)
+![lua workflow](https://github.com/rclawlor/regex-railroad.nvim/actions/workflows/lua.yml/badge.svg)
+
 
 `regex-railroad.nvim` generates useful text and diagrams<sup>1</sup> to help explain regular expressions in your code.
 
