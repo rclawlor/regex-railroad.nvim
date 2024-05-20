@@ -1,4 +1,9 @@
-local config = {}
+local opts = {
+    --- Highlight group used in :RegexText
+    highlight = {
+        bold = true
+    }
+}
 
 
-return config
+return opts

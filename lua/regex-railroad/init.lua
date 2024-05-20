@@ -1,13 +1,15 @@
-local regex_railroad = { }
+local M = {}
 
+-- Imports
+local config = require("regex-railroad.config")
 
 --- Setup function for the regex-railroad.nvim plugin
 ---
 --- @param opts table
-function regex_railroad.setup(opts)
+function M.setup(opts)
     opts = opts or {}
 
-    require("regex-railroad.config").set_defaults(opts)
+    config.set_defaults(opts)
 end
 
-return regex_railroad
+return M

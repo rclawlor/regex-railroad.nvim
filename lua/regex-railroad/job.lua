@@ -1,14 +1,19 @@
-local locate_binary = require('regex-railroad.utils').locate_binary
+local M = {}
 
--- Holds the binary to start
+-- Imports
+local utils = require("regex-railroad.utils")
+
+-- Variables
 local binary = nil
+M.jobid = nil
 
--- Holds buffer -> jobid associations
-local jobid = nil
 
-local function attach(buf, filename)
+--- Attach RPC job to current file
+---
+--- @param filename string current filename
+function M.attach(filename)
     if binary == nil then
-        binary = locate_binary()
+        binary = utils.locate_binary()
     end
 
     local binlist
@@ -18,7 +23,7 @@ local function attach(buf, filename)
         binlist = { binary, filename }
     end
 
-    jobid = vim.api.nvim_call_function(
+    M.jobid = vim.api.nvim_call_function(
         "jobstart",
         {
             binlist,
@@ -26,26 +31,25 @@ local function attach(buf, filename)
         }
     )
 
-    if jobid == 0 then
+    if M.jobid == 0 then
         return false
-    elseif jobid == -1 then
+    elseif M.jobid == -1 then
         return false
     else
-        return jobid
+        return M.jobid
     end
 end
 
 
-local function detach(buf)
-    buf = buf or vim.api.nvim_get_current_buf()
-
-    if not jobid then
+--- Detach RPC job
+function M.detach()
+    if not M.jobid then
         return false
     else
-        vim.api.nvim_command.call(
+        vim.api.nvim_call_function(
             "rpcnotify",
             {
-                jobid,
+                M.jobid,
                 "quit"
             }
         )
@@ -54,9 +58,4 @@ local function detach(buf)
 end
 
 
-return {
-    attach = attach,
-    detach = detach,
-    jobid = jobid
-}
-
+return M

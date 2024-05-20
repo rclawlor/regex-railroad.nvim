@@ -1,5 +1,10 @@
+local M = {}
+
+-- Imports
 local job = require("regex-railroad.job")
-local command = {}
+local config = require("regex-railroad.config")
+
+-- Variables
 local jobid
 
 
@@ -125,9 +130,7 @@ end
 
 
 --- Runs when :RegexRailroad command executed
----
---- @param args table
-function command.run_diagram_command(args)
+function M.run_diagram_command()
     -- Use treesitter to extract regex text
     local line
     local node = vim.treesitter.get_node()
@@ -144,9 +147,7 @@ end
 
 
 --- Runs when :RegexText command executed
----
---- @param args table
-function command.run_text_command(args)
+function M.run_text_command()
     -- Use treesitter to extract regex text
     local line
     local node = vim.treesitter.get_node()
@@ -156,7 +157,16 @@ function command.run_text_command(args)
         line = ""
     end
 
+    -- Use filename to extract current language
     local filename = vim.api.nvim_buf_get_name(0)
+
+    -- Set highlight group from config
+    vim.api.nvim_set_hl(
+        0,
+        "RegexHighlight",
+        config.opts.highlight
+    )
+
     local current_buf = vim.api.nvim_get_current_buf()
     local current_win = vim.api.nvim_get_current_win()
 
