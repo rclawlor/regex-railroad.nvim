@@ -202,10 +202,7 @@ impl EventHandler {
                     let msg = &value[0];
                     // TODO: handle errors if arguments incorrect
                     let filename = msg[0].as_str().unwrap();
-                    let _row = msg[1].as_u64().unwrap();
-                    let _col = msg[2].as_u64().unwrap();
-                    let _len = msg[3].as_u64().unwrap();
-                    let text = msg[4].as_str().unwrap();
+                    let text = msg[1].as_str().unwrap();
                     info!("Received message: {}", text);
                     let regex = match self.regex_railroad.get_regex(filename, text) {
                         Ok(regex) => {
@@ -267,7 +264,13 @@ impl EventHandler {
                     info!("{:?}", parsed_regex);
                     match self.nvim.call_function(
                         "nvim_buf_set_lines",
-                        vec![buf.clone(), Value::from(1), Value::from(-1), Value::from(true), text.iter().map(|x| format!(" {} ", x)).collect()]
+                        vec![
+                            buf.clone(),
+                            Value::from(1),
+                            Value::from(-1),
+                            Value::from(true),
+                            text.iter().map(|x| format!(" {} ", x)).collect()
+                        ]
                     ) {
                         Ok(_) => (),
                         Err(e) => error!("Error setting buffer lines: {}", e)
