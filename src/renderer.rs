@@ -5,6 +5,9 @@ use tracing::{error, info};
 
 use crate::parser::{CharacterType, RegEx, RepetitionType};
 
+type HighlightRegion = (usize, usize, usize);
+
+
 lazy_static! {
     static ref DRAWING_CHARS: HashMap<&'static str, char> = [
         ("START", '╟'),
@@ -64,7 +67,7 @@ impl RegExRenderer {
 
     pub fn render_text(
         tree: &RegEx,
-    ) -> Result<(Vec<String>, Vec<(usize, usize, usize)>), String> {
+    ) -> Result<(Vec<String>, Vec<HighlightRegion>), String> {
         let mut text = Vec::new();
         let mut highlight = Vec::new();
         info!("Rendering text...");
@@ -99,7 +102,7 @@ impl RegExRenderer {
         Ok((text, highlight))
     }
 
-    fn render_text_element(tree: &RegEx, text: &mut Vec<String>, highlight: &mut Vec<(usize, usize, usize)>) -> Result<String, String> {
+    fn render_text_element(tree: &RegEx, text: &mut Vec<String>, highlight: &mut Vec<HighlightRegion>) -> Result<String, String> {
         info!("Rendering text element...");
         match tree {
             RegEx::Element(a) => {
