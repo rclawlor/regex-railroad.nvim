@@ -1,7 +1,7 @@
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::ops::Deref;
-use tracing::error;
+use tracing::{error, info};
 
 use crate::parser::{CharacterType, RegEx, RepetitionType};
 
@@ -62,28 +62,30 @@ impl RegExRenderer {
         Ok(vec![])
     }
 
-    pub fn render_text(tree: &RegEx) -> Result<(Vec<String>, Vec<bool>), String> {
-        let mut msg = Vec::new();
+    pub fn render_text(
+        tree: &RegEx,
+    ) -> Result<(Vec<String>, Vec<(usize, usize, usize)>), String> {
+        let mut text = Vec::new();
         let mut highlight = Vec::new();
+        info!("Rendering text...");
         match tree {
             RegEx::Element(a) => {
                 for i in a.iter() {
+                    info!("{:?}", i);
                     match **i {
                         RegEx::Terminal(_) => {
-                            msg.push("EXACTLY:".to_string());
-                            highlight.push(true);
-                            msg.push(format!("    {}", RegExRenderer::render_text_element(i)?));
-                            highlight.push(false);
-                        },
+                            info!("Terminal");
+                            let msg = "EXACTLY:".to_string();
+                            highlight
+                                .push((text.len(), 0, msg.len()));
+                            text.push(msg);
+                            let msg = Self::render_text_element(i, &mut text, &mut highlight)?;
+                            text.push(format!("    {}", msg));
+                        }
                         _ => {
-                            let newmsg = RegExRenderer::render_text_element(i)?;
-                            for (n, submsg) in newmsg.split('\n').enumerate() {
-                                if n == 0 {
-                                    highlight.push(true);
-                                } else {
-                                    highlight.push(false);
-                                }
-                                msg.push(submsg.to_string());
+                            let newmsg = Self::render_text_element(i, &mut text, &mut highlight)?;
+                            for submsg in newmsg.split('\n') {
+                                text.push(submsg.to_string());
                             }
                         }
                     }
@@ -94,49 +96,56 @@ impl RegExRenderer {
                 panic!("Expected RegEx::Element, received {:?}", other);
             }
         }
-        Ok((msg, highlight))
+        Ok((text, highlight))
     }
 
-    fn render_text_element(tree: &RegEx) -> Result<String, String> {
+    fn render_text_element(tree: &RegEx, text: &mut Vec<String>, highlight: &mut Vec<(usize, usize, usize)>) -> Result<String, String> {
+        info!("Rendering text element...");
         match tree {
             RegEx::Element(a) => {
                 let mut msg = "".to_string();
                 for i in a.iter() {
-                    msg = format!("{}{}", msg, Self::render_text_element(i.deref())?)
+                    msg = format!("{}{}", msg, Self::render_text_element(i.deref(), text, highlight)?)
                 }
                 Ok(msg)
             }
             RegEx::Repetition(t, a) => {
                 match t {
-                    RepetitionType::ZeroOrOne => Ok(format!("{}: 0 or 1", Self::render_text_element(a)?)),
+                    RepetitionType::ZeroOrOne => Ok(format!("0 OR 1:\n    {}", Self::render_text_element(a, text, highlight)?)),
                     RepetitionType::OrMore(n) => {
-                        Ok(format!("{} OR MORE:\n    {}", n, Self::render_text_element(a)?))
+                        let msg = format!("{} OR MORE:", n);
+                        highlight.push((text.len(), 0, msg.len()));
+                        Ok(format!("{}\n    {}", msg, Self::render_text_element(a, text, highlight)?))
                     }
                     RepetitionType::Exactly(n) => {
-                        Ok(format!("EXACTLY {}:\n    {}", n, Self::render_text_element(a)?))
+                        let msg = format!("EXACTLY {}:", n);
+                        highlight.push((text.len(), 0, msg.len()));
+                        Ok(format!("{}\n    {}", msg, Self::render_text_element(a, text, highlight)?))
                     }
                     RepetitionType::Between(n, m) => {
-                        Ok(format!("BETWEEN {} AND {}:\n    {}", n, m, Self::render_text_element(a)?))
+                        let msg = format!("BETWEEN {} AND {}:", n, m);
+                        highlight.push((text.len(), 0, msg.len()));
+                        Ok(format!("{}\n    {}", msg, Self::render_text_element(a, text, highlight)?))
                     }
                 }
             }
             RegEx::Alternation(a) => {
-                let mut msg = Self::render_text_element(a.first().unwrap())?.to_string();
+                let mut msg = Self::render_text_element(a.first().unwrap(), text, highlight)?.to_string();
                 for i in a.iter().skip(1) {
-                    msg = format!("{} OR {}", msg, Self::render_text_element(i)?);
+                    msg = format!("{} OR {}", msg, Self::render_text_element(i, text, highlight)?);
                 }
                 Ok(msg)
             }
             RegEx::Character(a) => match a {
                 CharacterType::Any(b) => {
-                    let mut msg = String::from("Match string:");
+                    let mut msg = String::from("MATCH:");
                     for i in b.iter() {
                         msg = format!("{} {}", msg, Self::render_character(i)?)
                     }
                     Ok(msg)
                 }
                 CharacterType::Not(b) => {
-                    let mut msg = String::from("Don't match string:");
+                    let mut msg = String::from("DON'T MATCH:");
                     for i in b.iter() {
                         msg = format!("{} {}", msg, Self::render_character(i)?)
                     }

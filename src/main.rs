@@ -223,8 +223,21 @@ impl EventHandler {
                         }
                     };
                     info!("Parsed regular expression: {:?}", parsed_regex);
-                    let (text, highlight) = RegExRenderer::render_text(&parsed_regex).unwrap();
-                    let _diagram = RegExRenderer::render_diagram(&parsed_regex).unwrap();
+                    let (text, highlight) = match RegExRenderer::render_text(&parsed_regex) {
+                        Ok((text, highlight)) => (text, highlight),
+                        Err(e) => {
+                            error!("Error rendering text: {}", e);
+                            panic!()
+                        }
+                    };
+                    info!("Successfully rendered text");
+                    let _diagram = match RegExRenderer::render_diagram(&parsed_regex) {
+                        Ok(_diagram) => _diagram,
+                        Err(e) => {
+                            error!("Error rendering diagram: {}", e);
+                            panic!()
+                        }
+                    };
                     let buf = match self.nvim.call_function(
                         "nvim_create_buf",
                         vec![Value::Boolean(false), Value::Boolean(true)],
@@ -235,6 +248,7 @@ impl EventHandler {
                             panic!();
                         }
                     };
+                    info!("Creating win");
                     let win_opts = Value::Map(vec![
                         // Increase height and width by 2 for whitespace padding
                         (
@@ -250,17 +264,17 @@ impl EventHandler {
                         (Value::from("col"), Value::from(0)),
                     ]);
                     info!("{:?}", buf);
-                    let win = match self
-                        .nvim
-                        .call_function("nvim_open_win", vec![buf.clone(), Value::Boolean(true), win_opts])
-                    {
+                    let win = match self.nvim.call_function(
+                        "nvim_open_win",
+                        vec![buf.clone(), Value::Boolean(true), win_opts],
+                    ) {
                         Ok(win) => win,
                         Err(e) => {
                             error!("Error creating window: {}", e);
                             panic!();
                         }
                     };
-                    info!("Opened window with ID {}", win); 
+                    info!("Opened window with ID {}", win);
                     info!("{:?}", parsed_regex);
                     match self.nvim.call_function(
                         "nvim_buf_set_lines",
@@ -269,20 +283,29 @@ impl EventHandler {
                             Value::from(1),
                             Value::from(-1),
                             Value::from(true),
-                            text.iter().map(|x| format!(" {} ", x)).collect()
-                        ]
+                            text.iter().map(|x| format!(" {} ", x)).collect(),
+                        ],
                     ) {
                         Ok(_) => (),
-                        Err(e) => error!("Error setting buffer lines: {}", e)
+                        Err(e) => error!("Error setting buffer lines: {}", e),
                     };
 
-                    for (n, hl) in highlight.iter().enumerate() {
-                        if *hl {
-                            self.nvim.call_function(
+                    info!("{:?}", highlight);
+                    for (line, start, end) in highlight.iter() {
+                        self.nvim
+                            .call_function(
                                 "nvim_buf_add_highlight",
-                                vec![buf.clone(), Value::from(0), Value::from("RegexHighlight"), Value::from(n + 1), Value::from(0), Value::from(-1)]
-                            ).unwrap();
-                        }
+                                vec![
+                                    buf.clone(),
+                                    Value::from(0),
+                                    Value::from("RegexHighlight"),
+                                    // 0/1 indexing fun
+                                    Value::from(1 + *line),
+                                    Value::from(1 + *start),
+                                    Value::from(1 + *end),
+                                ],
+                            )
+                            .unwrap();
                     }
                     info!("Finished");
                 }
