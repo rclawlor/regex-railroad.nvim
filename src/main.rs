@@ -223,7 +223,7 @@ impl EventHandler {
                         }
                     };
                     info!("Parsed regular expression: {:?}", parsed_regex);
-                    let text = RegExRenderer::render_text(&parsed_regex).unwrap();
+                    let (text, highlight) = RegExRenderer::render_text(&parsed_regex).unwrap();
                     let _diagram = RegExRenderer::render_diagram(&parsed_regex).unwrap();
                     let buf = match self.nvim.call_function(
                         "nvim_create_buf",
@@ -275,10 +275,15 @@ impl EventHandler {
                         Ok(_) => (),
                         Err(e) => error!("Error setting buffer lines: {}", e)
                     };
-                    self.nvim.call_function(
-                        "nvim_buf_add_highlight",
-                        vec![buf, Value::from(0), Value::from("RegexHighlight"), Value::from(2), Value::from(0), Value::from(-1)]
-                    ).unwrap();
+
+                    for (n, hl) in highlight.iter().enumerate() {
+                        if *hl {
+                            self.nvim.call_function(
+                                "nvim_buf_add_highlight",
+                                vec![buf.clone(), Value::from(0), Value::from("RegexHighlight"), Value::from(n + 1), Value::from(0), Value::from(-1)]
+                            ).unwrap();
+                        }
+                    }
                     info!("Finished");
                 }
                 Message::Unknown(unknown) => {

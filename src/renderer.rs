@@ -62,19 +62,27 @@ impl RegExRenderer {
         Ok(vec![])
     }
 
-    pub fn render_text(tree: &RegEx) -> Result<Vec<String>, String> {
+    pub fn render_text(tree: &RegEx) -> Result<(Vec<String>, Vec<bool>), String> {
         let mut msg = Vec::new();
+        let mut highlight = Vec::new();
         match tree {
             RegEx::Element(a) => {
                 for i in a.iter() {
                     match **i {
                         RegEx::Terminal(_) => {
                             msg.push("EXACTLY:".to_string());
-                            msg.push(format!("    {}", RegExRenderer::render_text_element(i)?))
+                            highlight.push(true);
+                            msg.push(format!("    {}", RegExRenderer::render_text_element(i)?));
+                            highlight.push(false);
                         },
                         _ => {
                             let newmsg = RegExRenderer::render_text_element(i)?;
-                            for submsg in newmsg.split('\n') {
+                            for (n, submsg) in newmsg.split('\n').enumerate() {
+                                if n == 0 {
+                                    highlight.push(true);
+                                } else {
+                                    highlight.push(false);
+                                }
                                 msg.push(submsg.to_string());
                             }
                         }
@@ -86,7 +94,7 @@ impl RegExRenderer {
                 panic!("Expected RegEx::Element, received {:?}", other);
             }
         }
-        Ok(msg)
+        Ok((msg, highlight))
     }
 
     fn render_text_element(tree: &RegEx) -> Result<String, String> {
