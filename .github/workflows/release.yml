@@ -15,11 +15,11 @@ jobs:
           run: cargo build --release --verbose
         - name: Release
           uses: softprops/action-gh-release@v2
-            with:
-              files: |
-                target/release/regex-railroad
-                lua
-                plugin
-                LICENSE
-                README.md
+          with:
+            files: |
+              target/release/regex-railroad
+              lua
+              plugin
+              LICENSE
+              README.md
 
