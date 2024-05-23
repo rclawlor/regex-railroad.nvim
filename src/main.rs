@@ -193,8 +193,77 @@ impl EventHandler {
         for (event, value) in receiver {
             match Message::from(event) {
                 Message::RegexRailroad => {
+                    // Handle RPC arguments
+                    // TODO: handle errors if arguments incorrect
                     let msg = &value[0];
-                    let _text = msg[0].as_str().unwrap();
+                    let filename = msg[0].as_str().unwrap();
+                    let text = msg[1].as_str().unwrap();
+                    info!("Received message: {}", text);
+
+                    // Obtain regular expression from received text
+                    let regex = self.regex_railroad.get_regex(filename, text)?;
+                    self.send_msg(&regex);
+            
+                    // Parse and render regular expression
+                    let mut parser = RegExParser::new(&regex);
+                    let parsed_regex = parser.parse()?;
+                    info!("Parsed regular expression: {:?}", parsed_regex);
+                    let diagram = RegExRenderer::render_diagram(&parsed_regex)?;
+                    info!("Successfully rendered diagram");
+
+                    // Create neovim buffer and window
+                    let buf = match self.nvim.call_function(
+                        "nvim_create_buf",
+                        vec![Value::Boolean(false), Value::Boolean(true)],
+                    ) {
+                        Ok(buf) => buf,
+                        Err(e) => {
+                            error!("Error creating buffer: {}", e);
+                            panic!();
+                        }
+                    };
+                    let win_opts = Value::Map(vec![
+                        // Increase height and width by 2 for whitespace padding
+                        (
+                            Value::from("width"),
+                            Value::from(diagram.iter().max_by_key(|x| x.len()).unwrap().len() + 2),
+                        ),
+                        (Value::from("height"), Value::from(text.len() + 2)),
+                        // TODO: allow styles to be set by the user
+                        (Value::from("style"), Value::from("minimal")),
+                        (Value::from("relative"), Value::from("cursor")),
+                        // Slight offset for readability
+                        (Value::from("row"), Value::from(1)),
+                        (Value::from("col"), Value::from(0)),
+                    ]);
+                    match self.nvim.call_function(
+                        "nvim_open_win",
+                        vec![buf.clone(), Value::Boolean(true), win_opts],
+                    ) {
+                        Ok(win) => {
+                            info!("Opened window with ID {}", win);
+                            win
+                        },
+                        Err(e) => {
+                            error!("Error creating window: {}", e);
+                            panic!();
+                        }
+                    };
+
+                    match self.nvim.call_function(
+                        "nvim_buf_set_lines",
+                        vec![
+                            buf.clone(),
+                            Value::from(1),
+                            Value::from(-1),
+                            Value::from(true),
+                            diagram.iter().map(|x| format!(" {:?} ", x)).collect(),
+                        ],
+                    ) {
+                        Ok(_) => (),
+                        Err(e) => error!("Error setting buffer lines: {}", e),
+                    };
+
                 }
                 Message::RegexText => {
                     // Handle RPC arguments
@@ -214,7 +283,6 @@ impl EventHandler {
                     info!("Parsed regular expression: {:?}", parsed_regex);
                     let (text, highlight) = RegExRenderer::render_text(&parsed_regex)?;
                     info!("Successfully rendered text");
-                    let _diagram = RegExRenderer::render_diagram(&parsed_regex)?;
 
                     // Create neovim buffer and window
                     let buf = match self.nvim.call_function(

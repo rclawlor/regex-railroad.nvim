@@ -93,6 +93,13 @@ impl RegExRenderer {
                         }
                     }
                 }
+            },
+            RegEx::Alternation(a) => {
+                let mut msg = Self::render_text_element(a.first().unwrap(), &mut text, &mut highlight)?.to_string();
+                for i in a.iter().skip(1) {
+                    msg = format!("{} OR {}", msg, Self::render_text_element(i, &mut text, &mut highlight)?);
+                }
+                text.push(msg);
             }
             other => {
                 error!("Expected RegEx::Element, received {:?}", other);
