@@ -23,8 +23,8 @@ struct StringFormat {
     literal_string_end: Option<Vec<String>>,
 }
 
-#[derive(Eq, Hash, PartialEq, Debug)]
-enum Language {
+#[derive(Clone, Eq, Hash, PartialEq, Debug)]
+pub enum Language {
     Python,
     Rust,
     Unknown(String),
@@ -80,13 +80,13 @@ impl RegexRailroad {
     }
 
     /// Find string characters used for file type
-    fn get_string_format(&self, language: &Language) -> Result<&StringFormat, String> {
+    fn get_string_format(&self, language: &Language) -> Result<&StringFormat, Error> {
         match STRING_FORMAT.get(language) {
             Some(string_format) => {
                 info!("Found escape character '{:?}'", string_format);
                 Ok(string_format)
             }
-            None => Err(format!("File extension not supported: {:?}", language)),
+            None => Err(Error::UnsupportedLanguage(language.clone())),
         }
     }
 
@@ -132,7 +132,7 @@ impl RegexRailroad {
     }
 
     /// Check if text is a regular expression based on language
-    fn get_regex(&self, filename: &str, text: &str) -> Result<String, String> {
+    fn get_regex<'a>(&'a self, filename: &str, text: &'a str) -> Result<String, Error> {
         let language = Language::from_filename(filename);
         let string_format = self.get_string_format(&language)?;
 
@@ -157,7 +157,7 @@ impl RegexRailroad {
         let str_character = string_format.string_character.as_ref();
         match self.strip_string_start_end(text, str_character, str_character) {
             Some(regex) => Ok(regex),
-            None => Err(format!("'{}' is not a valid {} string", text, language)),
+            None => Err(Error::InvalidString(language, text.to_string())),
         }
     }
 }
@@ -187,58 +187,36 @@ impl EventHandler {
         }
     }
 
-    fn recv(&mut self) {
+    fn recv(&mut self) -> Result<(), Error> {
         let receiver = self.nvim.session.start_event_loop_channel();
         info!("Started RPC event loop");
         for (event, value) in receiver {
-            info!("Received RPC: {:?}", value);
             match Message::from(event) {
                 Message::RegexRailroad => {
                     let msg = &value[0];
-                    let text = msg[0].as_str().unwrap();
-                    info!("ECHO: {}", text);
+                    let _text = msg[0].as_str().unwrap();
                 }
                 Message::RegexText => {
-                    // Message sends index, current line
-                    let msg = &value[0];
+                    // Handle RPC arguments
                     // TODO: handle errors if arguments incorrect
+                    let msg = &value[0];
                     let filename = msg[0].as_str().unwrap();
                     let text = msg[1].as_str().unwrap();
                     info!("Received message: {}", text);
-                    let regex = match self.regex_railroad.get_regex(filename, text) {
-                        Ok(regex) => {
-                            info!("Received regular expression: {}", regex);
-                            regex
-                        }
-                        Err(e) => {
-                            error!("Error retrieving regular expression: {}", e);
-                            panic!("{}", e)
-                        }
-                    };
+
+                    // Obtain regular expression from received text
+                    let regex = self.regex_railroad.get_regex(filename, text)?;
+                    self.send_msg(&regex);
+            
+                    // Parse and render regular expression
                     let mut parser = RegExParser::new(&regex);
-                    let parsed_regex = match parser.parse() {
-                        Ok(parsed_regex) => parsed_regex,
-                        Err(e) => {
-                            self.send_error(e);
-                            panic!("{}", e)
-                        }
-                    };
+                    let parsed_regex = parser.parse()?;
                     info!("Parsed regular expression: {:?}", parsed_regex);
-                    let (text, highlight) = match RegExRenderer::render_text(&parsed_regex) {
-                        Ok((text, highlight)) => (text, highlight),
-                        Err(e) => {
-                            error!("Error rendering text: {}", e);
-                            panic!()
-                        }
-                    };
+                    let (text, highlight) = RegExRenderer::render_text(&parsed_regex)?;
                     info!("Successfully rendered text");
-                    let _diagram = match RegExRenderer::render_diagram(&parsed_regex) {
-                        Ok(_diagram) => _diagram,
-                        Err(e) => {
-                            error!("Error rendering diagram: {}", e);
-                            panic!()
-                        }
-                    };
+                    let _diagram = RegExRenderer::render_diagram(&parsed_regex)?;
+
+                    // Create neovim buffer and window
                     let buf = match self.nvim.call_function(
                         "nvim_create_buf",
                         vec![Value::Boolean(false), Value::Boolean(true)],
@@ -249,7 +227,6 @@ impl EventHandler {
                             panic!();
                         }
                     };
-                    info!("Creating win");
                     let win_opts = Value::Map(vec![
                         // Increase height and width by 2 for whitespace padding
                         (
@@ -264,19 +241,19 @@ impl EventHandler {
                         (Value::from("row"), Value::from(1)),
                         (Value::from("col"), Value::from(0)),
                     ]);
-                    info!("{:?}", buf);
-                    let win = match self.nvim.call_function(
+                    match self.nvim.call_function(
                         "nvim_open_win",
                         vec![buf.clone(), Value::Boolean(true), win_opts],
                     ) {
-                        Ok(win) => win,
+                        Ok(win) => {
+                            info!("Opened window with ID {}", win);
+                            win
+                        },
                         Err(e) => {
                             error!("Error creating window: {}", e);
                             panic!();
                         }
                     };
-                    info!("Opened window with ID {}", win);
-                    info!("{:?}", parsed_regex);
                     match self.nvim.call_function(
                         "nvim_buf_set_lines",
                         vec![
@@ -291,7 +268,7 @@ impl EventHandler {
                         Err(e) => error!("Error setting buffer lines: {}", e),
                     };
 
-                    info!("{:?}", highlight);
+                    // Highlight keywords in text
                     for (line, start, end) in highlight.iter() {
                         self.nvim
                             .call_function(
@@ -318,14 +295,23 @@ impl EventHandler {
                 }
             }
         }
+        Ok(())
     }
 
-    /// Echo error to the command line
-    fn send_error(&mut self, error: Error) {
+    /// Send message to the command line
+    fn send_msg(&mut self, msg: &String) {
+        self.nvim
+            .command(&format!("echo \"{}\"", msg))
+            .unwrap();
+    }
+
+    /// Echo error to the command line and exit
+    fn send_error(&mut self, error: Error) -> ! {
         error!("{}", error);
         self.nvim
             .command(&format!("echo \"{}\"", error))
             .unwrap();
+        panic!()
     }
 }
 
@@ -363,5 +349,8 @@ fn main() {
 
     let mut event_handler = EventHandler::new();
 
-    event_handler.recv();
+    match event_handler.recv() {
+        Ok(_) => (),
+        Err(e) => event_handler.send_error(e)
+    }
 }

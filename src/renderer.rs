@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::ops::Deref;
 use tracing::{error, info};
 
-use crate::parser::{CharacterType, RegEx, RepetitionType};
+use crate::{error::Error, parser::{CharacterType, RegEx, RepetitionType}};
 
 type HighlightRegion = (usize, usize, usize);
 
@@ -45,7 +45,7 @@ impl RegExRenderer {
         }
     }
 
-    pub fn render_diagram(tree: &RegEx) -> Result<Vec<Vec<String>>, String> {
+    pub fn render_diagram(tree: &RegEx) -> Result<Vec<Vec<String>>, Error> {
         let mut msg = Vec::new();
         match tree {
             RegEx::Element(a) => {
@@ -61,13 +61,13 @@ impl RegExRenderer {
         Ok(msg)
     }
 
-    fn render_diagram_element() -> Result<Vec<String>, String> {
+    fn render_diagram_element() -> Result<Vec<String>, Error> {
         Ok(vec![])
     }
 
     pub fn render_text(
         tree: &RegEx,
-    ) -> Result<(Vec<String>, Vec<HighlightRegion>), String> {
+    ) -> Result<(Vec<String>, Vec<HighlightRegion>), Error> {
         let mut text = Vec::new();
         let mut highlight = Vec::new();
         info!("Rendering text...");
@@ -102,7 +102,7 @@ impl RegExRenderer {
         Ok((text, highlight))
     }
 
-    fn render_text_element(tree: &RegEx, text: &mut Vec<String>, highlight: &mut Vec<HighlightRegion>) -> Result<String, String> {
+    fn render_text_element(tree: &RegEx, text: &mut Vec<String>, highlight: &mut Vec<HighlightRegion>) -> Result<String, Error> {
         info!("Rendering text element...");
         match tree {
             RegEx::Element(a) => {
@@ -156,13 +156,13 @@ impl RegExRenderer {
                     }
                     Ok(msg)
                 }
-                _ => Err("Invalid parsing: RegEx::Character cannot begin with CharacterType::Between or CharacterType::Terminal".to_string()),
+                _ => Err(Error::InvalidParsing),
             },
             RegEx::Terminal(a) => Ok(format!("'{}'", a))
         }
     }
 
-    fn render_character(character: &CharacterType) -> Result<String, String> {
+    fn render_character(character: &CharacterType) -> Result<String, Error> {
         match character {
             CharacterType::Between(a, b) => Ok(format!(
                 "[{}-{}]",
@@ -170,7 +170,7 @@ impl RegExRenderer {
                 Self::render_character(b)?
             )),
             CharacterType::Terminal(a) => Ok(format!("{}", a)),
-            _ => Err("Invalid parsing".to_string()),
+            _ => Err(Error::InvalidParsing),
         }
     }
 }
