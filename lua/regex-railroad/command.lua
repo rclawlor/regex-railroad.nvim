@@ -164,7 +164,6 @@ function M.run_text_command()
         config.opts.highlight
     )
 
-    local current_buf = vim.api.nvim_get_current_buf()
     local current_win = vim.api.nvim_get_current_win()
 
     jobid = job.attach(filename)
