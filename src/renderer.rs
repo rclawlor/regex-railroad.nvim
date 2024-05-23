@@ -3,10 +3,12 @@ use std::collections::HashMap;
 use std::ops::Deref;
 use tracing::{error, info};
 
-use crate::{error::Error, parser::{CharacterType, RegEx, RepetitionType}};
+use crate::{
+    error::Error,
+    parser::{CharacterType, RegEx, RepetitionType},
+};
 
 type HighlightRegion = (usize, usize, usize);
-
 
 lazy_static! {
     static ref DRAWING_CHARS: HashMap<&'static str, char> = [
@@ -65,9 +67,7 @@ impl RegExRenderer {
         Ok(vec![])
     }
 
-    pub fn render_text(
-        tree: &RegEx,
-    ) -> Result<(Vec<String>, Vec<HighlightRegion>), Error> {
+    pub fn render_text(tree: &RegEx) -> Result<(Vec<String>, Vec<HighlightRegion>), Error> {
         let mut text = Vec::new();
         let mut highlight = Vec::new();
         info!("Rendering text...");
@@ -79,8 +79,7 @@ impl RegExRenderer {
                         RegEx::Terminal(_) => {
                             info!("Terminal");
                             let msg = "EXACTLY:".to_string();
-                            highlight
-                                .push((text.len(), 0, msg.len()));
+                            highlight.push((text.len(), 0, msg.len()));
                             text.push(msg);
                             let msg = Self::render_text_element(i, &mut text, &mut highlight)?;
                             text.push(format!("    {}", msg));
@@ -93,11 +92,17 @@ impl RegExRenderer {
                         }
                     }
                 }
-            },
+            }
             RegEx::Alternation(a) => {
-                let mut msg = Self::render_text_element(a.first().unwrap(), &mut text, &mut highlight)?.to_string();
+                let mut msg =
+                    Self::render_text_element(a.first().unwrap(), &mut text, &mut highlight)?
+                        .to_string();
                 for i in a.iter().skip(1) {
-                    msg = format!("{} OR {}", msg, Self::render_text_element(i, &mut text, &mut highlight)?);
+                    msg = format!(
+                        "{} OR {}",
+                        msg,
+                        Self::render_text_element(i, &mut text, &mut highlight)?
+                    );
                 }
                 text.push(msg);
             }
@@ -109,40 +114,66 @@ impl RegExRenderer {
         Ok((text, highlight))
     }
 
-    fn render_text_element(tree: &RegEx, text: &mut Vec<String>, highlight: &mut Vec<HighlightRegion>) -> Result<String, Error> {
+    fn render_text_element(
+        tree: &RegEx,
+        text: &mut Vec<String>,
+        highlight: &mut Vec<HighlightRegion>,
+    ) -> Result<String, Error> {
         info!("Rendering text element...");
         match tree {
             RegEx::Element(a) => {
                 let mut msg = "".to_string();
                 for i in a.iter() {
-                    msg = format!("{}{}", msg, Self::render_text_element(i.deref(), text, highlight)?)
+                    msg = format!(
+                        "{}{}",
+                        msg,
+                        Self::render_text_element(i.deref(), text, highlight)?
+                    )
                 }
                 Ok(msg)
             }
-            RegEx::Repetition(t, a) => {
-                match t {
-                    RepetitionType::ZeroOrOne => Ok(format!("0 OR 1:\n    {}", Self::render_text_element(a, text, highlight)?)),
-                    RepetitionType::OrMore(n) => {
-                        let msg = format!("{} OR MORE:", n);
-                        highlight.push((text.len(), 0, msg.len()));
-                        Ok(format!("{}\n    {}", msg, Self::render_text_element(a, text, highlight)?))
-                    }
-                    RepetitionType::Exactly(n) => {
-                        let msg = format!("EXACTLY {}:", n);
-                        highlight.push((text.len(), 0, msg.len()));
-                        Ok(format!("{}\n    {}", msg, Self::render_text_element(a, text, highlight)?))
-                    }
-                    RepetitionType::Between(n, m) => {
-                        let msg = format!("BETWEEN {} AND {}:", n, m);
-                        highlight.push((text.len(), 0, msg.len()));
-                        Ok(format!("{}\n    {}", msg, Self::render_text_element(a, text, highlight)?))
-                    }
+            RegEx::Repetition(t, a) => match t {
+                RepetitionType::ZeroOrOne => Ok(format!(
+                    "0 OR 1:\n    {}",
+                    Self::render_text_element(a, text, highlight)?
+                )),
+                RepetitionType::OrMore(n) => {
+                    let msg = format!("{} OR MORE:", n);
+                    highlight.push((text.len(), 0, msg.len()));
+                    Ok(format!(
+                        "{}\n    {}",
+                        msg,
+                        Self::render_text_element(a, text, highlight)?
+                    ))
                 }
-            }
+                RepetitionType::Exactly(n) => {
+                    let msg = format!("EXACTLY {}:", n);
+                    highlight.push((text.len(), 0, msg.len()));
+                    Ok(format!(
+                        "{}\n    {}",
+                        msg,
+                        Self::render_text_element(a, text, highlight)?
+                    ))
+                }
+                RepetitionType::Between(n, m) => {
+                    let msg = format!("BETWEEN {} AND {}:", n, m);
+                    highlight.push((text.len(), 0, msg.len()));
+                    Ok(format!(
+                        "{}\n    {}",
+                        msg,
+                        Self::render_text_element(a, text, highlight)?
+                    ))
+                }
+            },
             RegEx::Alternation(a) => {
-                let mut msg = Self::render_text_element(a.first().unwrap(), text, highlight)?.to_string();
+                let mut msg =
+                    Self::render_text_element(a.first().unwrap(), text, highlight)?.to_string();
                 for i in a.iter().skip(1) {
-                    msg = format!("{} OR {}", msg, Self::render_text_element(i, text, highlight)?);
+                    msg = format!(
+                        "{} OR {}",
+                        msg,
+                        Self::render_text_element(i, text, highlight)?
+                    );
                 }
                 Ok(msg)
             }
@@ -165,7 +196,7 @@ impl RegExRenderer {
                 }
                 _ => Err(Error::InvalidParsing),
             },
-            RegEx::Terminal(a) => Ok(format!("'{}'", a))
+            RegEx::Terminal(a) => Ok(format!("'{}'", a)),
         }
     }
 

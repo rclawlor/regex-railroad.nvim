@@ -203,7 +203,7 @@ impl EventHandler {
                     // Obtain regular expression from received text
                     let regex = self.regex_railroad.get_regex(filename, text)?;
                     self.send_msg(&regex);
-            
+
                     // Parse and render regular expression
                     let mut parser = RegExParser::new(&regex);
                     let parsed_regex = parser.parse()?;
@@ -243,7 +243,7 @@ impl EventHandler {
                         Ok(win) => {
                             info!("Opened window with ID {}", win);
                             win
-                        },
+                        }
                         Err(e) => {
                             error!("Error creating window: {}", e);
                             panic!();
@@ -263,7 +263,6 @@ impl EventHandler {
                         Ok(_) => (),
                         Err(e) => error!("Error setting buffer lines: {}", e),
                     };
-
                 }
                 Message::RegexText => {
                     // Handle RPC arguments
@@ -276,7 +275,7 @@ impl EventHandler {
                     // Obtain regular expression from received text
                     let regex = self.regex_railroad.get_regex(filename, text)?;
                     self.send_msg(&regex);
-            
+
                     // Parse and render regular expression
                     let mut parser = RegExParser::new(&regex);
                     let parsed_regex = parser.parse()?;
@@ -316,7 +315,7 @@ impl EventHandler {
                         Ok(win) => {
                             info!("Opened window with ID {}", win);
                             win
-                        },
+                        }
                         Err(e) => {
                             error!("Error creating window: {}", e);
                             panic!();
@@ -368,17 +367,13 @@ impl EventHandler {
 
     /// Send message to the command line
     fn send_msg(&mut self, msg: &String) {
-        self.nvim
-            .command(&format!("echo \"{}\"", msg))
-            .unwrap();
+        self.nvim.command(&format!("echo \"{}\"", msg)).unwrap();
     }
 
     /// Echo error to the command line and exit
     fn send_error(&mut self, error: Error) -> ! {
         error!("{}", error);
-        self.nvim
-            .command(&format!("echo \"{}\"", error))
-            .unwrap();
+        self.nvim.command(&format!("echo \"{}\"", error)).unwrap();
         panic!()
     }
 }
@@ -419,6 +414,6 @@ fn main() {
 
     match event_handler.recv() {
         Ok(_) => (),
-        Err(e) => event_handler.send_error(e)
+        Err(e) => event_handler.send_error(e),
     }
 }

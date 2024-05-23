@@ -1,6 +1,5 @@
-use lazy_static::lazy_static;
 use crate::error::Error;
-
+use lazy_static::lazy_static;
 
 lazy_static! {
     static ref SPECIAL_CHARS: Vec<char> = vec!['(', ')', '+', '*', '$', '|', '^', '{', '}'];
@@ -222,9 +221,7 @@ impl RegExParser {
                                 Box::new(CharacterType::Terminal(digit_b)),
                             )
                         }
-                        other => {
-                            return Err(Error::CharacterRange(digit_a, other))
-                        }
+                        other => return Err(Error::CharacterRange(digit_a, other)),
                     }
                 } else {
                     CharacterType::Terminal(digit_a)
@@ -242,9 +239,7 @@ impl RegExParser {
                                 Box::new(CharacterType::Terminal(letter_b)),
                             )
                         }
-                        other => {
-                            return Err(Error::CharacterRange(letter_a, other))
-                        }
+                        other => return Err(Error::CharacterRange(letter_a, other)),
                     }
                 } else {
                     CharacterType::Terminal(letter_a)
@@ -262,9 +257,7 @@ impl RegExParser {
                                 Box::new(CharacterType::Terminal(capital_b)),
                             )
                         }
-                        other => {
-                            return Err(Error::CharacterRange(capital_a, other))
-                        }
+                        other => return Err(Error::CharacterRange(capital_a, other)),
                     }
                 } else {
                     CharacterType::Terminal(capital_a)
