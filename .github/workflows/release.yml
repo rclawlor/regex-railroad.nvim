@@ -18,8 +18,8 @@ jobs:
           with:
             files: |
               target/release/regex-railroad
-              lua
-              plugin
+              lua/*/**
+              plugin/*/**
               LICENSE
               README.md
 
