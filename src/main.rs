@@ -4,14 +4,15 @@ use std::{collections::HashMap, fmt::Display, fs::File, sync::Arc};
 use tracing::{error, info, warn};
 use tracing_subscriber::{self, layer::SubscriberExt};
 
-use crate::{parser::RegExParser, renderer::RegExRenderer};
+use crate::{error::Error, parser::RegExParser, renderer::RegExRenderer};
 
+pub mod error;
 pub mod parser;
 pub mod renderer;
 
 const _TEST_LITERAL: &str = r"This is a literal string";
 const _TEST_NORMAL: &str = "(a|b)+hello(cd){5,}";
-const _TEST_CHARACTER: &str = "[^aoeu_0-9]";
+const _TEST_CHARACTER: &str = "[^aoeu_0-a]";
 const _TEST_OPTIONS: &str = "(ab|bc|cd)";
 
 #[derive(Debug)]
@@ -218,7 +219,7 @@ impl EventHandler {
                     let parsed_regex = match parser.parse() {
                         Ok(parsed_regex) => parsed_regex,
                         Err(e) => {
-                            error!("Error parsing regular expression: {}", e);
+                            self.send_error(e);
                             panic!("{}", e)
                         }
                     };
@@ -317,6 +318,14 @@ impl EventHandler {
                 }
             }
         }
+    }
+
+    /// Echo error to the command line
+    fn send_error(&mut self, error: Error) {
+        error!("{}", error);
+        self.nvim
+            .command(&format!("echo \"{}\"", error))
+            .unwrap();
     }
 }
 

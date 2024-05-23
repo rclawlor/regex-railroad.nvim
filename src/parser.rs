@@ -1,4 +1,6 @@
 use lazy_static::lazy_static;
+use crate::error::Error;
+
 
 lazy_static! {
     static ref SPECIAL_CHARS: Vec<char> = vec!['(', ')', '+', '*', '$', '|', '^', '{', '}'];
@@ -43,11 +45,11 @@ impl RegExParser {
         }
     }
 
-    pub fn parse(&mut self) -> Result<RegEx, String> {
+    pub fn parse(&mut self) -> Result<RegEx, Error> {
         self.alternation()
     }
 
-    fn alternation(&mut self) -> Result<RegEx, String> {
+    fn alternation(&mut self) -> Result<RegEx, Error> {
         let elem1 = self.element()?;
         if !self.more() || self.peek() != '|' {
             Ok(elem1)
@@ -62,7 +64,7 @@ impl RegExParser {
         }
     }
 
-    fn element(&mut self) -> Result<RegEx, String> {
+    fn element(&mut self) -> Result<RegEx, Error> {
         let mut v = Vec::new();
         while self.more() && self.peek() != ')' && self.peek() != '|' {
             let r = self.repetition()?;
@@ -71,7 +73,7 @@ impl RegExParser {
         Ok(RegEx::Element(v))
     }
 
-    fn repetition(&mut self) -> Result<RegEx, String> {
+    fn repetition(&mut self) -> Result<RegEx, Error> {
         let b = self.group()?;
         if self.more() {
             match self.peek() {
@@ -96,7 +98,7 @@ impl RegExParser {
     }
 
     /// Find the type of repetition present
-    fn repetition_group(&mut self) -> Result<RepetitionType, String> {
+    fn repetition_group(&mut self) -> Result<RepetitionType, Error> {
         self.consume('{')?;
         let mut min_count: u32 = 0;
         let mut max_count: Option<u32> = None;
@@ -118,10 +120,7 @@ impl RegExParser {
                     break;
                 }
                 unknown => {
-                    return Err(format!(
-                        "Char '{}' not valid number for repetition group",
-                        unknown
-                    ));
+                    return Err(Error::RepetitionValue(unknown));
                 }
             }
         }
@@ -150,10 +149,7 @@ impl RegExParser {
                     self.consume(num)?;
                 }
                 unknown => {
-                    return Err(format!(
-                        "Char '{}' not valid number for repetition group",
-                        unknown
-                    ));
+                    return Err(Error::RepetitionValue(unknown));
                 }
             }
         }
@@ -174,7 +170,7 @@ impl RegExParser {
         }
     }
 
-    fn group(&mut self) -> Result<RegEx, String> {
+    fn group(&mut self) -> Result<RegEx, Error> {
         if self.peek() == '(' {
             self.consume('(').unwrap();
             let a = self.alternation()?;
@@ -194,7 +190,7 @@ impl RegExParser {
         }
     }
 
-    fn character(&mut self) -> Result<CharacterType, String> {
+    fn character(&mut self) -> Result<CharacterType, Error> {
         let mut match_char = true;
         if self.peek() == '^' {
             self.consume('^').unwrap();
@@ -212,7 +208,7 @@ impl RegExParser {
         }
     }
 
-    fn next_character(&mut self) -> Result<Box<CharacterType>, String> {
+    fn next_character(&mut self) -> Result<Box<CharacterType>, Error> {
         let c = match self.peek() {
             digit_a @ '0'..='9' => {
                 self.consume(digit_a).unwrap();
@@ -227,7 +223,7 @@ impl RegExParser {
                             )
                         }
                         other => {
-                            return Err(format!("Invalid character range: [{}-{}]", digit_a, other))
+                            return Err(Error::CharacterRange(digit_a, other))
                         }
                     }
                 } else {
@@ -247,10 +243,7 @@ impl RegExParser {
                             )
                         }
                         other => {
-                            return Err(format!(
-                                "Invalid character range: [{}-{}]",
-                                letter_a, other
-                            ))
+                            return Err(Error::CharacterRange(letter_a, other))
                         }
                     }
                 } else {
@@ -270,10 +263,7 @@ impl RegExParser {
                             )
                         }
                         other => {
-                            return Err(format!(
-                                "Invalid character range: [{}-{}]",
-                                capital_a, other
-                            ))
+                            return Err(Error::CharacterRange(capital_a, other))
                         }
                     }
                 } else {
@@ -302,21 +292,18 @@ impl RegExParser {
     }
 
     /// 'Consume' char c from the text
-    fn consume(&mut self, c: char) -> Result<(), String> {
+    fn consume(&mut self, c: char) -> Result<(), Error> {
         let p = self.peek();
         if p == c {
             self.idx += 1;
             Ok(())
         } else {
-            Err(format!(
-                "Character {} does not match current string {}",
-                c, p
-            ))
+            Err(Error::StringIterator(c, p))
         }
     }
 
     /// Move to next character, consuming the current one
-    fn next(&mut self) -> Result<char, String> {
+    fn next(&mut self) -> Result<char, Error> {
         let c = self.peek();
         self.consume(c)?;
         Ok(c)

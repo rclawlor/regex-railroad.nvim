@@ -141,16 +141,18 @@ impl RegExRenderer {
             }
             RegEx::Character(a) => match a {
                 CharacterType::Any(b) => {
-                    let mut msg = String::from("MATCH:");
+                    let mut msg = String::from("MATCH:\n");
+                    highlight.push((text.len(), 0, msg.len()));
                     for i in b.iter() {
                         msg = format!("{} {}", msg, Self::render_character(i)?)
                     }
                     Ok(msg)
                 }
                 CharacterType::Not(b) => {
-                    let mut msg = String::from("DON'T MATCH:");
+                    let mut msg = String::from("DON'T MATCH:\n");
+                    highlight.push((text.len(), 0, msg.len()));
                     for i in b.iter() {
-                        msg = format!("{} {}", msg, Self::render_character(i)?)
+                        msg = format!("{}{}", msg, Self::render_character(i)?)
                     }
                     Ok(msg)
                 }
@@ -163,7 +165,7 @@ impl RegExRenderer {
     fn render_character(character: &CharacterType) -> Result<String, String> {
         match character {
             CharacterType::Between(a, b) => Ok(format!(
-                "{} to {}",
+                "[{}-{}]",
                 Self::render_character(a)?,
                 Self::render_character(b)?
             )),

@@ -113,8 +113,7 @@ end
 --- Sets up autocommand to wait for floating window open
 ---
 --- @param win_id integer ID of current window
---- @param buf_id integer ID of current buffer
-local function win_open_autocmd(win_id, buf_id)
+local function win_open_autocmd(win_id)
     vim.api.nvim_create_autocmd("WinNew", {
         once = true,
         callback = function()
@@ -122,7 +121,6 @@ local function win_open_autocmd(win_id, buf_id)
             local fbuf = vim.api.nvim_get_current_buf()
 
             vim.api.nvim_set_current_win(win_id)
-            vim.api.nvim_command(string.format("echomsg '%d -> %d'", buf_id, fbuf))
             configure_floating_window(fwin, fbuf)
         end,
     })
@@ -172,7 +170,7 @@ function M.run_text_command()
     jobid = job.attach(filename)
     regex_text(filename, line)
 
-    win_open_autocmd(current_win, current_buf)
+    win_open_autocmd(current_win)
 end
 
 return M
