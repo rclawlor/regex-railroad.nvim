@@ -6,7 +6,8 @@ on:
 name: Upload Release
 
 jobs:
-  build:
+  upload-release:
+    permissions: write-all
     name: Upload Release
     runs-on: ubuntu-latest
     steps:
@@ -19,7 +20,7 @@ jobs:
             files: |
               target/release/regex-railroad
               lua/*/**
-              plugin/*/**
+              plugin/regex-railroad.lua
               LICENSE
               README.md
 
