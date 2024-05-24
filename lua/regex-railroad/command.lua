@@ -172,4 +172,5 @@ function M.run_text_command()
     win_open_autocmd(current_win)
 end
 
+
 return M

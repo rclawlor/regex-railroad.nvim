@@ -1,4 +1,6 @@
-local opts = {
+local M = {
+    --- Github release of plugin
+    tag = "v0.0.1",
     --- Highlight group used in :RegexText
     highlight = {
         bold = true,
@@ -8,4 +10,4 @@ local opts = {
 }
 
 
-return opts
+return M

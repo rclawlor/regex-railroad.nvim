@@ -1,7 +1,7 @@
 local M = {}
 
 -- Imports
-local utils = require("regex-railroad.utils")
+local consts = require("regex-railroad.consts")
 
 -- Variables
 local binary = nil
@@ -13,7 +13,7 @@ M.jobid = nil
 --- @param filename string current filename
 function M.attach(filename)
     if binary == nil then
-        binary = utils.locate_binary()
+        binary = consts.binary_location
     end
 
     local binlist
