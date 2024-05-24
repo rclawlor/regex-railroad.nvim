@@ -2,5 +2,8 @@
 local utils = require("regex-railroad.utils")
 
 
-vim.schedule(utils.install_binary())
-
+vim.schedule(
+    function()
+        utils.install_binary()
+    end
+)
