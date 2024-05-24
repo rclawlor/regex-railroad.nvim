@@ -19,8 +19,4 @@ jobs:
           with:
             files: |
               target/release/regex-railroad
-              lua/*/**
-              plugin/regex-railroad.lua
-              LICENSE
-              README.md
 
