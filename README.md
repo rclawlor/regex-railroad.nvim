@@ -13,13 +13,12 @@
 - [nvim-treesitter/nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter) to extract the regular expression text
 
 ### Installation
-Eventually this will be possible, but there is no stable release yet!
-
+#### lazy.nvim
 ```lua
 -- plugins/regex-railroad.lua:
 return {
-    "nvim-telescope/telescope.nvim",
-    tag = "0.1.0",
+    "rclawlor/regex-railroad.nvim",
+    tag = "0.0.1",
     dependencies = { "nvim-treesitter/nvim-treesitter" }
 }
 ```
@@ -37,6 +36,14 @@ This section explains the available options for configuring `regex-railroad.nvim
 
 ### Setup function
 ```lua
-require("regex-railroad").setup({})
+require("regex-railroad").setup({
+    --- Github release of plugin
+    tag = "v0.0.1",
+    --- Highlight group used in :RegexText
+    highlight = {
+        bold = true,
+        fg = "fg",
+        bg = "bg"
+    }})
 ```
 
