@@ -2,7 +2,7 @@
 *.log
 
 # regex-railroad binary
-regex-railroad
+/regex-railroad
 
 # Added by cargo
 

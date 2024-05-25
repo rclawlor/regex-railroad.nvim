@@ -14,7 +14,12 @@ function M.install_binary()
                 tag
             )
         )
-    local command = string.format("%s/build.sh %s >/dev/null 2>&1", consts.root_directory, tag)
+    local command = string.format(
+        "%s/build.sh %s %s >/dev/null 2>&1",
+        consts.root_directory,
+        consts.root_directory,
+        tag
+    )
     local code = os.execute(command) / 256
     if not (code == 0 or code == nil) then
         vim.notify(
