@@ -17,7 +17,7 @@ function M.install_binary()
                 string.format(consts.wget_errors[code], tag)
             )
         )
-    end 
+    end
 end
 
 
