@@ -1,6 +1,9 @@
 # Rust application log
 *.log
 
+# regex-railroad binary
+regex-railroad
+
 # Added by cargo
 
 /target

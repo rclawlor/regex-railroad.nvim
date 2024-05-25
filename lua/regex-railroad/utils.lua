@@ -8,20 +8,35 @@ local consts = require("regex-railroad.consts")
 --- Download and install binary from Github release
 function M.install_binary()
     local tag = config.opts.tag
-    local command = string.format("../../build.sh %s", tag)
-    local _, _, code = os.execute(command)
-    if code ~= 0 then
-        vim.api.nvim_command(
+    vim.api.nvim_command(
             string.format(
-                "echo \"%s (see https://github.com/rclawlor/regex-railroad.nvim/releases)\"",
-                string.format(consts.wget_errors[code], tag)
+                "echo \"Installing regex-railroad %s\"",
+                tag
             )
+        )
+    local command = string.format("%s/build.sh %s >/dev/null 2>&1", consts.root_directory, tag)
+    local code = os.execute(command) / 256
+    if not (code == 0 or code == nil) then
+        vim.notify(
+            string.format(
+                "%s (see https://github.com/rclawlor/regex-railroad.nvim/releases)",
+                string.format(consts.wget_errors[code], tag)
+            ),
+            vim.log.levels.ERROR
+        )
+    else
+        vim.notify(
+            string.format(
+                "Successfully installed regex-railroad %s",
+                tag
+            ),
+            vim.log.levels.INFO
         )
     end
 end
 
 
--- Check if the file exists
+--- Check if the file exists
 local function file_exists(file)
     local f = io.open(file, "rb")
     if f then
@@ -30,8 +45,10 @@ local function file_exists(file)
     return f ~= nil
 end
 
--- get all lines from a file, returns an empty
--- list/table if the file does not exist
+--- Get all lines from a file
+---
+--- @param file any file name
+--- @return table lines of file
 function M.lines_from_file(file)
     if not file_exists(file) then
         return {}

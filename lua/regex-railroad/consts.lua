@@ -1,9 +1,18 @@
 local M = {}
 
 -- Variables
+M.home_directory = string.format(
+    "%s", os.getenv("HOME")
+)
+
+M.root_directory = string.format(
+    "%s/nvim/lazy/regex-railroad.nvim",
+    os.getenv("XDG_CONFIG_HOME") or string.format("%s/.local/share", M.home_directory)
+)
+
 M.binary_location = string.format(
-    "{}/lazy/regex-railroad/regex-railroad",
-    os.getenv("XDG_CONFIG_HOME") or "~/.local/share"
+    "%s/regex-railroad",
+    M.root_directory
 )
 
 M.wget_errors = {
