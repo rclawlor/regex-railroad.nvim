@@ -2,13 +2,22 @@ local M = {}
 
 -- Imports
 local config = require("regex-railroad.config")
+local consts = require("regex-railroad.consts")
 
 
 --- Download and install binary from Github release
 function M.install_binary()
     local tag = config.opts.tag
     local command = string.format("../../build.sh %s", tag)
-    io.popen(command)
+    local _, _, code = os.execute(command)
+    if code ~= 0 then
+        vim.api.nvim_command(
+            string.format(
+                "echo \"%s (see https://github.com/rclawlor/regex-railroad.nvim/releases)\"",
+                string.format(consts.wget_errors[code], tag)
+            )
+        )
+    end 
 end
 
 
