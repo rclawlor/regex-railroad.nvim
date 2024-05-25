@@ -2,6 +2,7 @@ local M = {}
 
 -- Imports
 local config = require("regex-railroad.config")
+local http = require("luasocket.src.http")
 
 
 --- Download and install binary from Github release
@@ -12,7 +13,6 @@ function M.install_binary()
     local tag = config.opts.tag
 
     -- Download binary from Github release
-    local http = require("socket.http")
     local body, code = http.request(
         string.format(
             "https://github.com/rclawlor/regex-railroad.nvim/releases/download/{}/regex-railroad",
