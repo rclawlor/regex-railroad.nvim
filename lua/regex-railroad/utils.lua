@@ -2,7 +2,8 @@ local M = {}
 
 -- Imports
 local config = require("regex-railroad.config")
-local http = require("luasocket.src.http")
+package.path = package.path .. ";../luasocket/src/?.lua"
+local http = require("socket.http")
 
 
 --- Download and install binary from Github release
