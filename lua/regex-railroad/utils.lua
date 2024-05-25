@@ -2,32 +2,13 @@ local M = {}
 
 -- Imports
 local config = require("regex-railroad.config")
-package.path = package.path .. ";../luasocket/src/?.lua"
-local http = require("socket.http")
 
 
 --- Download and install binary from Github release
 function M.install_binary()
-    -- Find user install location
-    local home_dir = os.getenv("XDG_CONFIG_HOME") or "~/.local/share"
-    local install_dir = string.format("{}/lazy/regex-railroad", home_dir)
     local tag = config.opts.tag
-
-    -- Download binary from Github release
-    local body, code = http.request(
-        string.format(
-            "https://github.com/rclawlor/regex-railroad.nvim/releases/download/{}/regex-railroad",
-            tag
-        )
-    )
-    if not body then
-        error(code)
-    end
-
-    -- Save binary to lazy.nvim install location
-    local f = assert(io.open(string.format("{}/regex-railroad", install_dir), "wb"))
-    f:write(body)
-    f:close()
+    local command = string.format("../../build.sh %s", tag)
+    io.popen(command)
 end
 
 
