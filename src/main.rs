@@ -90,18 +90,17 @@ impl RegexRailroad {
         }
     }
 
-    /// Checks if start and end of text is consistent with the language's string specification
+    /// Checks if start/end of text is consistent with the language's string specification
+    /// and strips the start/end characters
     fn strip_string_start_end(
         &self,
         text: &str,
         start: &[String],
         end: &[String],
-    ) -> Option<String> {
+    ) -> String {
         // Ensure text is long enough to contain start and end characters
         let text_len = text.len();
 
-        let mut start_present = false;
-        let mut end_present = false;
         let mut max_start_len = 0;
         let mut max_end_len = 0;
 
@@ -109,7 +108,6 @@ impl RegexRailroad {
             if text_len > s.len() {
                 info!("Start: {} - {:?}", &text[0..s.len()], s);
                 if s.contains(&text[0..s.len()].to_string()) {
-                    start_present = true;
                     max_start_len = std::cmp::max(max_start_len, s.len());
                 }
             }
@@ -118,17 +116,11 @@ impl RegexRailroad {
             if text_len > e.len() {
                 info!("End: {} - {:?}", &text[text_len - end.len()..], end);
                 if end.contains(&text[text_len - e.len()..].to_string()) {
-                    end_present = true;
                     max_end_len = std::cmp::max(max_end_len, e.len());
                 }
             }
         }
-        // If text is a potentially valid string return it
-        if start_present && end_present {
-            Some(text[max_start_len..text_len - max_end_len].to_string())
-        } else {
-            None
-        }
+        text[max_start_len..text_len - max_end_len].to_string()
     }
 
     /// Check if text is a regular expression based on language
@@ -149,15 +141,11 @@ impl RegexRailroad {
                 .as_ref()
                 .expect("Literal string end already checked with '.is_some()'");
             // Ensure text is long enough to be a valid regex
-            if let Some(regex) = self.strip_string_start_end(text, str_start, str_end) {
-                return Ok(regex);
-            }
-        }
-        // Not a literal string, lets check for a normal string
-        let str_character = string_format.string_character.as_ref();
-        match self.strip_string_start_end(text, str_character, str_character) {
-            Some(regex) => Ok(regex),
-            None => Err(Error::InvalidString(language, text.to_string())),
+            Ok(self.strip_string_start_end(text, str_start, str_end))
+        } else {
+            // Not a literal string, lets check for a normal string
+            let str_character = string_format.string_character.as_ref();
+            Ok(self.strip_string_start_end(text, str_character, str_character))
         }
     }
 }
