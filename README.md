@@ -6,7 +6,7 @@
 
 `regex-railroad.nvim` generates useful text and diagrams<sup>1</sup> to help explain regular expressions in your code.
 
-<sup>1</sup>It doesn't actually do this yet, but it will!
+<sup>1 It doesn't actually do this yet, but it will!</sup>
 
 ## Getting started
 ### Required dependencies
