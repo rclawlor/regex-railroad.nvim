@@ -207,6 +207,8 @@ impl EventHandler {
                     let diagram = RailroadRenderer::render_diagram(&parsed_regex)?;
                     let diagram = &diagram[0];
                     info!("Successfully rendered diagram");
+                    let x = RailroadRenderer::generate_diagram(&parsed_regex);
+                    info!("{:?}", x);
 
                     // Create neovim buffer and window
                     let buf = match self.nvim.call_function(
