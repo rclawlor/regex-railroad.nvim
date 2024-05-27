@@ -14,7 +14,7 @@ pub enum RegEx {
     Terminal(String),
 }
 
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Clone, Copy, Eq, PartialEq, Debug)]
 pub enum RepetitionType {
     OrMore(u32),
     ZeroOrOne,

@@ -335,6 +335,44 @@ impl Draw for Terminal {
     }
 }
 
+/// A `Repetition` of a node
+pub struct Repetition<N> {
+    inner: N,
+    repetition: RepetitionType
+}
+
+impl<N> Repetition<N> {
+    pub fn new(inner: N, repetition: RepetitionType) -> Self {
+        Self { inner, repetition }
+    }
+
+    pub fn into_inner(self) -> N {
+        self.inner
+    }
+}
+
+impl<N> Draw for Repetition<N>
+where
+    N: Draw
+{
+    fn entry_height(&self) -> usize {
+        self.inner.entry_height()
+    }
+
+    fn height(&self) -> usize {
+        self.inner.height()
+    }
+
+    fn width(&self) -> usize {
+        self.inner.width()
+    }
+
+    fn draw(&self) -> Vec<String> {
+        // TODO: write function
+        vec![]
+    }
+}
+
 pub struct RailroadRenderer {
     _diagram: Vec<String>,
 }
@@ -352,23 +390,36 @@ impl RailroadRenderer {
         }
     }
 
-    pub fn generate_diagram(tree: &RegEx) {
+    pub fn generate_diagram(tree: &RegEx) -> Result<Vec<String>, Error> {
         let mut diagram = Sequence::new(vec![Box::new(Start {}) as Box<dyn Draw>]);
         match tree {
             RegEx::Element(a) => {
                 for i in a.iter() {
-                    Self::generate_diagram_element::<Box<dyn Draw>>(&*i, &mut diagram)
+                    let newelem = Self::generate_diagram_element::<Box<dyn Draw>>(&*i, &mut diagram)?;
+                    diagram.push(newelem);
                 }
             }
             _ => ()
         }
         info!("{:?}", diagram);
+        Ok(vec![])
     }
 
-    pub fn generate_diagram_element<N: Draw + ?Sized>(tree: &RegEx, diagram: &mut Sequence<Box<dyn Draw>>) {
+    pub fn generate_diagram_element<N: Draw + ?Sized>(
+        tree: &RegEx,
+        diagram: &mut Sequence<Box<dyn Draw>>
+    ) -> Result<Box<dyn Draw>, Error> {
         match tree {
-            RegEx::Terminal(a) => diagram.push(Box::new(Terminal { text: a.to_string() })),
-            _ => ()
+            RegEx::Terminal(a) => Ok(Box::new(Terminal { text: a.to_string() })),
+            RegEx::Repetition(repetition, a) => Ok(
+                Box::new(
+                    Repetition::<Box<dyn Draw>> {
+                        inner: Self::generate_diagram_element::<N>(a, diagram)?,
+                        repetition: *repetition
+                    }
+                )
+            ),
+            _ => panic!()
         }
     }
 
