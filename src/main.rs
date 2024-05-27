@@ -180,11 +180,11 @@ impl EventHandler {
                     // TODO: handle errors if arguments incorrect
                     let msg = &value[0];
                     let filename = msg[0].as_str().unwrap();
-                    let text = msg[1].as_str().unwrap();
-                    info!("Received message: {}", text);
+                    let node = msg[1].as_str().unwrap();
+                    info!("Received message: {}", node);
 
                     // Obtain regular expression from received text
-                    let regex = self.regex_railroad.get_regex(filename, text)?;
+                    let regex = self.regex_railroad.get_regex(filename, node)?;
                     self.send_msg(&regex);
 
                     // Parse and render regular expression
@@ -192,6 +192,7 @@ impl EventHandler {
                     let parsed_regex = parser.parse()?;
                     info!("Parsed regular expression: {:?}", parsed_regex);
                     let diagram = RegExRenderer::render_diagram(&parsed_regex)?;
+                    let diagram = &diagram[0];
                     info!("Successfully rendered diagram");
 
                     // Create neovim buffer and window
@@ -211,7 +212,7 @@ impl EventHandler {
                             Value::from("width"),
                             Value::from(diagram.iter().max_by_key(|x| x.len()).unwrap().len() + 2),
                         ),
-                        (Value::from("height"), Value::from(text.len() + 2)),
+                        (Value::from("height"), Value::from(diagram.len() + 2)),
                         // TODO: allow styles to be set by the user
                         (Value::from("style"), Value::from("minimal")),
                         (Value::from("relative"), Value::from("cursor")),
@@ -240,7 +241,7 @@ impl EventHandler {
                             Value::from(1),
                             Value::from(-1),
                             Value::from(true),
-                            diagram.iter().map(|x| format!(" {:?} ", x)).collect(),
+                            diagram.iter().map(|x| format!(" {} ", x)).collect(),
                         ],
                     ) {
                         Ok(_) => (),
@@ -252,11 +253,11 @@ impl EventHandler {
                     // TODO: handle errors if arguments incorrect
                     let msg = &value[0];
                     let filename = msg[0].as_str().unwrap();
-                    let text = msg[1].as_str().unwrap();
-                    info!("Received message: {}", text);
+                    let node = msg[1].as_str().unwrap();
+                    info!("Received message: {}", node);
 
                     // Obtain regular expression from received text
-                    let regex = self.regex_railroad.get_regex(filename, text)?;
+                    let regex = self.regex_railroad.get_regex(filename, node)?;
                     self.send_msg(&regex);
 
                     // Parse and render regular expression

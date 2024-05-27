@@ -1,6 +1,6 @@
 use lazy_static::lazy_static;
 use std::collections::HashMap;
-use std::ops::Deref;
+use std::{iter, ops::Deref};
 use tracing::{error, info};
 
 use crate::{
@@ -9,6 +9,9 @@ use crate::{
 };
 
 type HighlightRegion = (usize, usize, usize);
+
+const H_PADDING: usize = 2;
+const V_PADDING: usize = 2;
 
 lazy_static! {
     static ref DRAWING_CHARS: HashMap<&'static str, char> = [
@@ -48,11 +51,11 @@ impl RegExRenderer {
     }
 
     pub fn render_diagram(tree: &RegEx) -> Result<Vec<Vec<String>>, Error> {
-        let mut msg = Vec::new();
+        let mut diagram = Vec::new();
         match tree {
             RegEx::Element(a) => {
-                for _i in a.iter() {
-                    msg.push(RegExRenderer::render_diagram_element()?);
+                for i in a.iter() {
+                    diagram.push(RegExRenderer::render_diagram_element(i)?);
                 }
             }
             other => {
@@ -60,11 +63,61 @@ impl RegExRenderer {
                 panic!("Expected RegEx::Element, received {:?}", other);
             }
         }
-        Ok(msg)
+        Ok(diagram)
     }
 
-    fn render_diagram_element() -> Result<Vec<String>, Error> {
-        Ok(vec![])
+    fn render_diagram_element(tree: &RegEx) -> Result<Vec<String>, Error> {
+        Ok(RegExRenderer::draw_box(&"Hello!".to_string()))
+    }
+
+    fn draw_box(text: &String) -> Vec<String> {
+        let width = text.len() + H_PADDING;
+        let height = V_PADDING;
+        let mut diagram: Vec<String> = Vec::new();
+
+        // Top row
+        diagram.push(format!(
+            "{}{}{}",
+            DRAWING_CHARS["CORNER_TL_SQR"],
+            iter::repeat(DRAWING_CHARS["LINE_HORZ"])
+                .take(width)
+                .collect::<String>(),
+            DRAWING_CHARS["CORNER_TR_SQR"]
+        ));
+        // Padding rows
+        for _ in 0..height / 2 {
+            diagram.push(format!(
+                "{}{}{}",
+                DRAWING_CHARS["LINE_VERT"],
+                iter::repeat(' ').take(width).collect::<String>(),
+                DRAWING_CHARS["LINE_VERT"]
+            ))
+        }
+        // Text row
+        diagram.push(format!(
+            "{} {} {}",
+            DRAWING_CHARS["LINE_VERT"], text, DRAWING_CHARS["LINE_VERT"]
+        ));
+        // Padding rows
+        for _ in 0..height / 2 {
+            diagram.push(format!(
+                "{}{}{}",
+                DRAWING_CHARS["LINE_VERT"],
+                iter::repeat(' ').take(width).collect::<String>(),
+                DRAWING_CHARS["LINE_VERT"]
+            ))
+        }
+        // Top row
+        diagram.push(format!(
+            "{}{}{}",
+            DRAWING_CHARS["CORNER_BL_SQR"],
+            iter::repeat(DRAWING_CHARS["LINE_HORZ"])
+                .take(width)
+                .collect::<String>(),
+            DRAWING_CHARS["CORNER_BR_SQR"]
+        ));
+
+        diagram
     }
 
     pub fn render_text(tree: &RegEx) -> Result<(Vec<String>, Vec<HighlightRegion>), Error> {
