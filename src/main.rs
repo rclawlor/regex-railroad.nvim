@@ -4,11 +4,17 @@ use std::{collections::HashMap, fmt::Display, fs::File, sync::Arc};
 use tracing::{error, info, warn};
 use tracing_subscriber::{self, layer::SubscriberExt};
 
-use crate::{error::Error, parser::RegExParser, renderer::RegExRenderer};
+use crate::{
+    error::Error,
+    parser::RegExParser,
+    railroad::RailroadRenderer,
+    text::TextRenderer
+};
 
 pub mod error;
 pub mod parser;
-pub mod renderer;
+pub mod railroad;
+pub mod text;
 
 const _TEST_LITERAL: &str = r"This is a literal string";
 const _TEST_NORMAL: &str = "(a|b)+hello(cd){5,}";
@@ -170,6 +176,17 @@ impl EventHandler {
         }
     }
 
+    /// Retrieve filename and node text from RPC arguments
+    fn parse_rpc_args(&self, value: Vec<Value>) -> Result<(String, String), Error> {
+        // TODO: handle errors if arguments incorrect
+        let msg = &value[0];
+        let filename = msg[0].as_str().unwrap();
+        let node = msg[1].as_str().unwrap();
+        info!("Received message: {}", node);
+
+        Ok((filename.to_string(), node.to_string()))
+    }
+
     fn recv(&mut self) -> Result<(), Error> {
         let receiver = self.nvim.session.start_event_loop_channel();
         info!("Started RPC event loop");
@@ -177,21 +194,17 @@ impl EventHandler {
             match Message::from(event) {
                 Message::RegexRailroad => {
                     // Handle RPC arguments
-                    // TODO: handle errors if arguments incorrect
-                    let msg = &value[0];
-                    let filename = msg[0].as_str().unwrap();
-                    let node = msg[1].as_str().unwrap();
-                    info!("Received message: {}", node);
+                    let (filename, node) = self.parse_rpc_args(value)?;
 
                     // Obtain regular expression from received text
-                    let regex = self.regex_railroad.get_regex(filename, node)?;
+                    let regex = self.regex_railroad.get_regex(&filename, &node)?;
                     self.send_msg(&regex);
 
                     // Parse and render regular expression
                     let mut parser = RegExParser::new(&regex);
                     let parsed_regex = parser.parse()?;
                     info!("Parsed regular expression: {:?}", parsed_regex);
-                    let diagram = RegExRenderer::render_diagram(&parsed_regex)?;
+                    let diagram = RailroadRenderer::render_diagram(&parsed_regex)?;
                     let diagram = &diagram[0];
                     info!("Successfully rendered diagram");
 
@@ -250,21 +263,17 @@ impl EventHandler {
                 }
                 Message::RegexText => {
                     // Handle RPC arguments
-                    // TODO: handle errors if arguments incorrect
-                    let msg = &value[0];
-                    let filename = msg[0].as_str().unwrap();
-                    let node = msg[1].as_str().unwrap();
-                    info!("Received message: {}", node);
+                    let (filename, node) = self.parse_rpc_args(value)?;
 
                     // Obtain regular expression from received text
-                    let regex = self.regex_railroad.get_regex(filename, node)?;
+                    let regex = self.regex_railroad.get_regex(&filename, &node)?;
                     self.send_msg(&regex);
 
                     // Parse and render regular expression
                     let mut parser = RegExParser::new(&regex);
                     let parsed_regex = parser.parse()?;
                     info!("Parsed regular expression: {:?}", parsed_regex);
-                    let (text, highlight) = RegExRenderer::render_text(&parsed_regex)?;
+                    let (text, highlight) = TextRenderer::render_text(&parsed_regex)?;
                     info!("Successfully rendered text");
 
                     // Create neovim buffer and window
