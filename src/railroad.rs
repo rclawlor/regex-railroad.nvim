@@ -31,7 +31,6 @@ lazy_static! {
     .collect();
 }
 
-
 pub trait Draw {
     /// The number of lines from this element's top to where the entering,
     /// connecting path is drawn.
@@ -57,9 +56,9 @@ impl std::fmt::Debug for dyn Draw {
     }
 }
 
-impl <'a, N> Draw for &'a N
+impl<'a, N> Draw for &'a N
 where
-    N: Draw + ?Sized
+    N: Draw + ?Sized,
 {
     fn entry_height(&self) -> usize {
         (**self).entry_height()
@@ -78,9 +77,9 @@ where
     }
 }
 
-impl <N> Draw for Box<N>
+impl<N> Draw for Box<N>
 where
-    N: Draw + ?Sized
+    N: Draw + ?Sized,
 {
     fn entry_height(&self) -> usize {
         (**self).entry_height()
@@ -99,9 +98,9 @@ where
     }
 }
 
-impl <'a, N> Draw for &'a mut N
+impl<'a, N> Draw for &'a mut N
 where
-    N: Draw + ?Sized
+    N: Draw + ?Sized,
 {
     fn entry_height(&self) -> usize {
         (**self).entry_height()
@@ -175,7 +174,7 @@ where
 /// A horizontal sequence of railroad diagram elements
 #[derive(Debug)]
 pub struct Sequence<N> {
-    children: Vec<N>
+    children: Vec<N>,
 }
 
 impl<N> Sequence<N> {
@@ -200,7 +199,7 @@ impl<N> Sequence<N> {
 impl<N> Default for Sequence<N> {
     fn default() -> Self {
         Self {
-            children: Vec::new()
+            children: Vec::new(),
         }
     }
 }
@@ -213,7 +212,7 @@ impl<N> iter::FromIterator<N> for Sequence<N> {
 
 impl<N> Draw for Sequence<N>
 where
-    N: Draw
+    N: Draw,
 {
     fn entry_height(&self) -> usize {
         self.children.iter().max_entry_height()
@@ -239,7 +238,7 @@ pub struct Start {}
 impl Start {
     #[must_use]
     pub fn new() -> Self {
-        Start { }
+        Start {}
     }
 }
 
@@ -264,7 +263,7 @@ impl Draw for Start {
 /// A `Terminal` node
 #[derive(Debug)]
 pub struct Terminal {
-    text: String
+    text: String,
 }
 
 impl Terminal {
@@ -330,7 +329,7 @@ impl Draw for Terminal {
                 .collect::<String>(),
             DRAWING_CHARS["CORNER_BR_SQR"]
         ));
-        
+
         diagram
     }
 }
@@ -338,7 +337,7 @@ impl Draw for Terminal {
 /// A `Repetition` of a node
 pub struct Repetition<N> {
     inner: N,
-    repetition: RepetitionType
+    repetition: RepetitionType,
 }
 
 impl<N> Repetition<N> {
@@ -353,7 +352,40 @@ impl<N> Repetition<N> {
 
 impl<N> Draw for Repetition<N>
 where
-    N: Draw
+    N: Draw,
+{
+    fn entry_height(&self) -> usize {
+        self.inner.entry_height()
+    }
+
+    fn height(&self) -> usize {
+        self.inner.height()
+    }
+
+    fn width(&self) -> usize {
+        self.inner.width()
+    }
+
+    fn draw(&self) -> Vec<String> {
+        // TODO: write function
+        vec![]
+    }
+}
+
+/// An `Optional` node
+pub struct Optional<N> {
+    inner: N,
+}
+
+impl<N> Optional<N> {
+    pub fn new(inner: N) -> Self {
+        Optional { inner }
+    }
+}
+
+impl<N> Draw for Optional<N>
+where
+    N: Draw,
 {
     fn entry_height(&self) -> usize {
         self.inner.entry_height()
@@ -395,31 +427,34 @@ impl RailroadRenderer {
         match tree {
             RegEx::Element(a) => {
                 for i in a.iter() {
-                    let newelem = Self::generate_diagram_element::<Box<dyn Draw>>(&*i, &mut diagram)?;
+                    let newelem = Self::generate_diagram_element(&*i, &mut diagram)?;
                     diagram.push(newelem);
                 }
             }
-            _ => ()
+            _ => (),
         }
         info!("{:?}", diagram);
         Ok(vec![])
     }
 
-    pub fn generate_diagram_element<N: Draw + ?Sized>(
+    pub fn generate_diagram_element(
         tree: &RegEx,
-        diagram: &mut Sequence<Box<dyn Draw>>
+        diagram: &mut Sequence<Box<dyn Draw>>,
     ) -> Result<Box<dyn Draw>, Error> {
         match tree {
-            RegEx::Terminal(a) => Ok(Box::new(Terminal { text: a.to_string() })),
-            RegEx::Repetition(repetition, a) => Ok(
-                Box::new(
-                    Repetition::<Box<dyn Draw>> {
-                        inner: Self::generate_diagram_element::<N>(a, diagram)?,
-                        repetition: *repetition
-                    }
-                )
-            ),
-            _ => panic!()
+            RegEx::Terminal(a) => Ok(Box::new(Terminal {
+                text: a.to_string(),
+            })),
+            RegEx::Repetition(repetition, a) => match repetition {
+                RepetitionType::ZeroOrOne => Ok(Box::new(Optional::<Box<dyn Draw>> {
+                    inner: Self::generate_diagram_element(a, diagram)?,
+                })),
+                _ => Ok(Box::new(Repetition::<Box<dyn Draw>> {
+                    inner: Self::generate_diagram_element(a, diagram)?,
+                    repetition: *repetition,
+                })),
+            },
+            _ => panic!(),
         }
     }
 
@@ -431,7 +466,7 @@ impl RailroadRenderer {
                     match **i {
                         RegEx::Terminal(_) => {
                             diagram.push(Self::render_diagram_element(i)?);
-                        },
+                        }
                         _ => {
                             diagram.push(RailroadRenderer::render_diagram_element(i)?);
                         }
@@ -449,7 +484,7 @@ impl RailroadRenderer {
     fn render_diagram_element(tree: &RegEx) -> Result<Vec<String>, Error> {
         match tree {
             RegEx::Terminal(a) => Ok(RailroadRenderer::draw_box(a)),
-            _ => Ok(vec![String::new()])
+            _ => Ok(vec![String::new()]),
         }
     }
 
@@ -503,4 +538,3 @@ impl RailroadRenderer {
         diagram
     }
 }
-

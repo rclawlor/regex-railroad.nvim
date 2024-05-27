@@ -4,12 +4,7 @@ use std::{collections::HashMap, fmt::Display, fs::File, sync::Arc};
 use tracing::{error, info, warn};
 use tracing_subscriber::{self, layer::SubscriberExt};
 
-use crate::{
-    error::Error,
-    parser::RegExParser,
-    railroad::RailroadRenderer,
-    text::TextRenderer
-};
+use crate::{error::Error, parser::RegExParser, railroad::RailroadRenderer, text::TextRenderer};
 
 pub mod error;
 pub mod parser;
