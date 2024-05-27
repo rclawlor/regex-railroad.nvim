@@ -6,7 +6,9 @@ local M = {
         bold = true,
         fg = "fg",
         bg = "bg"
-    }
+    },
+    --- Look for binary in development dir
+    dev = false
 }
 
 

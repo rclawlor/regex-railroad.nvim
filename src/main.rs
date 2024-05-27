@@ -92,12 +92,7 @@ impl RegexRailroad {
 
     /// Checks if start/end of text is consistent with the language's string specification
     /// and strips the start/end characters
-    fn strip_string_start_end(
-        &self,
-        text: &str,
-        start: &[String],
-        end: &[String],
-    ) -> String {
+    fn strip_string_start_end(&self, text: &str, start: &[String], end: &[String]) -> String {
         // Ensure text is long enough to contain start and end characters
         let text_len = text.len();
 
@@ -361,7 +356,12 @@ impl EventHandler {
     /// Echo error to the command line and exit
     fn send_error(&mut self, error: Error) -> ! {
         error!("{}", error);
-        self.nvim.command(&format!("echo \"{}\"", error)).unwrap();
+        self.nvim
+            .command(&format!(
+                "echohl ErrorMsg | echo \"{}\" | echohl None",
+                error
+            ))
+            .unwrap();
         panic!()
     }
 }

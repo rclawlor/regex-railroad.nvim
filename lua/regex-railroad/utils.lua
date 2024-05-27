@@ -8,6 +8,7 @@ local consts = require("regex-railroad.consts")
 --- Download and install binary from Github release
 function M.install_binary()
     local tag = config.opts.tag
+    local directory = config.opts.dev and consts.dev_directory or consts.root_directory
     vim.api.nvim_command(
             string.format(
                 "echo \"Installing regex-railroad %s\"",
@@ -16,8 +17,8 @@ function M.install_binary()
         )
     local command = string.format(
         "%s/build.sh %s %s >/dev/null 2>&1",
-        consts.root_directory,
-        consts.root_directory,
+        directory,
+        directory,
         tag
     )
     local code = os.execute(command) / 256
