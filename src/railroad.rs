@@ -1,30 +1,32 @@
 use lazy_static::lazy_static;
-use std::collections::HashMap;
-use std::{iter, ops::Deref};
+use std::{collections::HashMap, fmt::format};
+use std::iter;
 use tracing::{error, info};
 
 use crate::{
     error::Error,
-    parser::{CharacterType, RegEx, RepetitionType},
+    parser::{RegEx, RepetitionType},
 };
 
 const H_PADDING: usize = 2;
-const V_PADDING: usize = 2;
 
 lazy_static! {
-    static ref DRAWING_CHARS: HashMap<&'static str, char> = [
+    static ref SYMBOL: HashMap<&'static str, char> = [
         ("START", '╟'),
         ("END", '╢'),
-        ("LINE_HORZ", '─'),
-        ("LINE_VERT", '│'),
-        ("CORNER_TL_SQR", '┌'),
-        ("CORNER_TR_SQR", '┐'),
-        ("CORNER_BL_SQR", '└'),
-        ("CORNER_BR_SQR", '┘'),
-        ("CORNER_TL_RND", '╭'),
-        ("CORNER_TR_RND", '╮'),
-        ("CORNER_BL_RND", '╰'),
-        ("CORNER_BR_RND", '╯')
+        ("CROSS", '┼'),
+        ("J_LEFT", '┤'),
+        ("J_RIGHT", '├'),
+        ("L_HORZ", '─'),
+        ("L_VERT", '│'),
+        ("C_TL_SQR", '┌'),
+        ("C_TR_SQR", '┐'),
+        ("C_BL_SQR", '└'),
+        ("C_BR_SQR", '┘'),
+        ("C_TL_RND", '╭'),
+        ("C_TR_RND", '╮'),
+        ("C_BL_RND", '╰'),
+        ("C_BR_RND", '╯')
     ]
     .iter()
     .copied()
@@ -227,7 +229,43 @@ where
     }
 
     fn draw(&self) -> Vec<String> {
-        vec![]
+        let mut diagram = vec![String::new()];
+        for (n, child) in self.children.iter().enumerate() {
+            let node = child.draw();
+            let length = node.len();
+
+            info!("Length {}", length);
+
+            // Add extra lines to top/bottom of diagram if necessary
+            if length > diagram.len() {
+                let empty = iter::repeat(' ').take(diagram[0].len() - 2).collect::<String>();
+                for i in 0..(length / 2) {
+                    diagram.insert(i, empty.clone());
+                    diagram.push(empty.clone());
+                }
+            }
+
+            if n > 0 {
+                // Add padding
+                let height = diagram.len();
+                let empty = iter::repeat(' ').take(H_PADDING).collect::<String>();
+                let line = iter::repeat(SYMBOL["L_HORZ"]).take(H_PADDING).collect::<String>();
+                for i in 0..height {
+                    if i == (height - 1) / 2 {
+                        diagram[i] = format!("{}{}", diagram[i], line);
+                    } else {
+                        diagram[i] = format!("{}{}", diagram[i], empty);
+                    }
+                }
+            }
+
+            // Append new node
+            for i in 0..length {
+                diagram[i] = format!("{}{}", diagram[i], node[i]);
+            }
+        }
+        
+        diagram
     }
 }
 
@@ -256,7 +294,7 @@ impl Draw for Start {
     }
 
     fn draw(&self) -> Vec<String> {
-        vec![DRAWING_CHARS["START"].to_string()]
+        vec![SYMBOL["START"].to_string()]
     }
 }
 
@@ -275,15 +313,15 @@ impl Terminal {
 
 impl Draw for Terminal {
     fn entry_height(&self) -> usize {
-        3
+        2
     }
 
     fn height(&self) -> usize {
-        5
+        3
     }
 
     fn width(&self) -> usize {
-        self.text.len()
+        self.text.len() + 2
     }
 
     fn draw(&self) -> Vec<String> {
@@ -291,43 +329,25 @@ impl Draw for Terminal {
         // Top row
         diagram.push(format!(
             "{}{}{}",
-            DRAWING_CHARS["CORNER_TL_SQR"],
-            iter::repeat(DRAWING_CHARS["LINE_HORZ"])
+            SYMBOL["C_TL_SQR"],
+            iter::repeat(SYMBOL["L_HORZ"])
                 .take(self.width())
                 .collect::<String>(),
-            DRAWING_CHARS["CORNER_TR_SQR"]
+            SYMBOL["C_TR_SQR"]
         ));
-        // Padding rows
-        for _ in 0..self.height() / 2 {
-            diagram.push(format!(
-                "{}{}{}",
-                DRAWING_CHARS["LINE_VERT"],
-                iter::repeat(' ').take(self.width()).collect::<String>(),
-                DRAWING_CHARS["LINE_VERT"]
-            ))
-        }
         // Text row
         diagram.push(format!(
             "{} {} {}",
-            DRAWING_CHARS["LINE_VERT"], self.text, DRAWING_CHARS["LINE_VERT"]
+            SYMBOL["J_LEFT"], self.text, SYMBOL["L_VERT"]
         ));
-        // Padding rows
-        for _ in 0..self.height() / 2 {
-            diagram.push(format!(
-                "{}{}{}",
-                DRAWING_CHARS["LINE_VERT"],
-                iter::repeat(' ').take(self.width()).collect::<String>(),
-                DRAWING_CHARS["LINE_VERT"]
-            ))
-        }
         // Top row
         diagram.push(format!(
             "{}{}{}",
-            DRAWING_CHARS["CORNER_BL_SQR"],
-            iter::repeat(DRAWING_CHARS["LINE_HORZ"])
+            SYMBOL["C_BL_SQR"],
+            iter::repeat(SYMBOL["L_HORZ"])
                 .take(self.width())
                 .collect::<String>(),
-            DRAWING_CHARS["CORNER_BR_SQR"]
+            SYMBOL["C_BR_SQR"]
         ));
 
         diagram
@@ -405,6 +425,38 @@ where
     }
 }
 
+/// A `Choice` of nodes
+pub struct Choice<N> {
+    inner: Vec<N>
+}
+
+impl<N> Choice<N> {
+    pub fn new(inner: Vec<N>) -> Self {
+        Choice { inner }
+    }
+}
+
+impl<N> Draw for Choice<N>
+where
+    N: Draw
+{
+    fn entry_height(&self) -> usize {
+        self.inner.iter().max_entry_height()
+    }
+
+    fn height(&self) -> usize {
+        self.inner.iter().max_height()
+    }
+
+    fn width(&self) -> usize {
+        self.inner.iter().max_width()
+    }
+
+    fn draw(&self) -> Vec<String> {
+        vec![]
+    }
+}
+
 pub struct RailroadRenderer {
     _diagram: Vec<String>,
 }
@@ -422,19 +474,22 @@ impl RailroadRenderer {
         }
     }
 
-    pub fn generate_diagram(tree: &RegEx) -> Result<Vec<String>, Error> {
+    pub fn generate_diagram(tree: &RegEx) -> Result<Sequence<Box<dyn Draw>>, Error> {
         let mut diagram = Sequence::new(vec![Box::new(Start {}) as Box<dyn Draw>]);
         match tree {
             RegEx::Element(a) => {
                 for i in a.iter() {
-                    let newelem = Self::generate_diagram_element(&*i, &mut diagram)?;
-                    diagram.push(newelem);
+                    let new_elem = Self::generate_diagram_element(&*i, &mut diagram)?;
+                    diagram.push(new_elem);
                 }
+            },
+            _ => {
+                let new_elem = Self::generate_diagram_element(tree, &mut diagram)?;
+                diagram.push(new_elem);
             }
-            _ => (),
         }
         info!("{:?}", diagram);
-        Ok(vec![])
+        Ok(diagram)
     }
 
     pub fn generate_diagram_element(
@@ -454,87 +509,15 @@ impl RailroadRenderer {
                     repetition: *repetition,
                 })),
             },
-            _ => panic!(),
+            RegEx::Alternation(a) => Ok(Box::new(Choice::<Box<dyn Draw>> {
+                inner: a.iter().map(|x| Self::generate_diagram_element(x, diagram).unwrap()).collect()
+            })),
+            _ => Ok(Box::new(Terminal { text: String::new() })),
         }
     }
 
-    pub fn render_diagram(tree: &RegEx) -> Result<Vec<Vec<String>>, Error> {
-        let mut diagram = Vec::new();
-        match tree {
-            RegEx::Element(a) => {
-                for i in a.iter() {
-                    match **i {
-                        RegEx::Terminal(_) => {
-                            diagram.push(Self::render_diagram_element(i)?);
-                        }
-                        _ => {
-                            diagram.push(RailroadRenderer::render_diagram_element(i)?);
-                        }
-                    }
-                }
-            }
-            other => {
-                error!("Expected RegEx::Element, received {:?}", other);
-                panic!("Expected RegEx::Element, received {:?}", other);
-            }
-        }
-        Ok(diagram)
-    }
-
-    fn render_diagram_element(tree: &RegEx) -> Result<Vec<String>, Error> {
-        match tree {
-            RegEx::Terminal(a) => Ok(RailroadRenderer::draw_box(a)),
-            _ => Ok(vec![String::new()]),
-        }
-    }
-
-    fn draw_box(text: &String) -> Vec<String> {
-        let width = text.len() + H_PADDING;
-        let height = V_PADDING;
-        let mut diagram: Vec<String> = Vec::new();
-
-        // Top row
-        diagram.push(format!(
-            "{}{}{}",
-            DRAWING_CHARS["CORNER_TL_SQR"],
-            iter::repeat(DRAWING_CHARS["LINE_HORZ"])
-                .take(width)
-                .collect::<String>(),
-            DRAWING_CHARS["CORNER_TR_SQR"]
-        ));
-        // Padding rows
-        for _ in 0..height / 2 {
-            diagram.push(format!(
-                "{}{}{}",
-                DRAWING_CHARS["LINE_VERT"],
-                iter::repeat(' ').take(width).collect::<String>(),
-                DRAWING_CHARS["LINE_VERT"]
-            ))
-        }
-        // Text row
-        diagram.push(format!(
-            "{} {} {}",
-            DRAWING_CHARS["LINE_VERT"], text, DRAWING_CHARS["LINE_VERT"]
-        ));
-        // Padding rows
-        for _ in 0..height / 2 {
-            diagram.push(format!(
-                "{}{}{}",
-                DRAWING_CHARS["LINE_VERT"],
-                iter::repeat(' ').take(width).collect::<String>(),
-                DRAWING_CHARS["LINE_VERT"]
-            ))
-        }
-        // Top row
-        diagram.push(format!(
-            "{}{}{}",
-            DRAWING_CHARS["CORNER_BL_SQR"],
-            iter::repeat(DRAWING_CHARS["LINE_HORZ"])
-                .take(width)
-                .collect::<String>(),
-            DRAWING_CHARS["CORNER_BR_SQR"]
-        ));
-
-        diagram
+    pub fn render_diagram(diagram: &Sequence<Box<dyn Draw>>) -> Result<Vec<String>, Error> {
+        Ok(diagram.draw())
     }
 }
+

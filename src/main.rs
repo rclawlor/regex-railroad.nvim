@@ -199,11 +199,16 @@ impl EventHandler {
                     let mut parser = RegExParser::new(&regex);
                     let parsed_regex = parser.parse()?;
                     info!("Parsed regular expression: {:?}", parsed_regex);
-                    let diagram = RailroadRenderer::render_diagram(&parsed_regex)?;
-                    let diagram = &diagram[0];
+                    let diagram = RailroadRenderer::generate_diagram(&parsed_regex)?;
+                    let text = RailroadRenderer::render_diagram(&diagram)?;
                     info!("Successfully rendered diagram");
-                    let x = RailroadRenderer::generate_diagram(&parsed_regex);
-                    info!("{:?}", x);
+                    let x = match RailroadRenderer::generate_diagram(&parsed_regex) {
+                        Ok(x) => info!("{:?}", x),
+                        Err(e) => {
+                            error!("{}", e);
+                            panic!()
+                        }
+                    };
 
                     // Create neovim buffer and window
                     let buf = match self.nvim.call_function(
@@ -220,9 +225,9 @@ impl EventHandler {
                         // Increase height and width by 2 for whitespace padding
                         (
                             Value::from("width"),
-                            Value::from(diagram.iter().max_by_key(|x| x.len()).unwrap().len() + 2),
+                            Value::from(text.iter().max_by_key(|x| x.len()).unwrap().len() + 2),
                         ),
-                        (Value::from("height"), Value::from(diagram.len() + 2)),
+                        (Value::from("height"), Value::from(text.len() + 2)),
                         // TODO: allow styles to be set by the user
                         (Value::from("style"), Value::from("minimal")),
                         (Value::from("relative"), Value::from("cursor")),
@@ -251,7 +256,7 @@ impl EventHandler {
                             Value::from(1),
                             Value::from(-1),
                             Value::from(true),
-                            diagram.iter().map(|x| format!(" {} ", x)).collect(),
+                            text.iter().map(|x| format!(" {} ", x)).collect(),
                         ],
                     ) {
                         Ok(_) => (),
