@@ -1,7 +1,7 @@
 use lazy_static::lazy_static;
-use std::{collections::HashMap, fmt::format};
+use std::collections::HashMap;
 use std::iter;
-use tracing::{error, info};
+use tracing::info;
 
 use crate::{
     error::Error,
@@ -17,6 +17,8 @@ lazy_static! {
         ("CROSS", '┼'),
         ("J_LEFT", '┤'),
         ("J_RIGHT", '├'),
+        ("J_UP", '┴'),
+        ("J_DOWN", '┬'),
         ("L_HORZ", '─'),
         ("L_VERT", '│'),
         ("C_TL_SQR", '┌'),
@@ -214,7 +216,7 @@ impl<N> iter::FromIterator<N> for Sequence<N> {
 
 impl<N> Draw for Sequence<N>
 where
-    N: Draw,
+    N: Draw + std::fmt::Debug
 {
     fn entry_height(&self) -> usize {
         self.children.iter().max_entry_height()
@@ -234,11 +236,10 @@ where
             let node = child.draw();
             let length = node.len();
 
-            info!("Length {}", length);
-
             // Add extra lines to top/bottom of diagram if necessary
             if length > diagram.len() {
-                let empty = iter::repeat(' ').take(diagram[0].len() - 2).collect::<String>();
+                let len = diagram[0].chars().count();
+                let empty = iter::repeat(' ').take(len).collect::<String>();
                 for i in 0..(length / 2) {
                     diagram.insert(i, empty.clone());
                     diagram.push(empty.clone());
@@ -264,7 +265,7 @@ where
                 diagram[i] = format!("{}{}", diagram[i], node[i]);
             }
         }
-        
+
         diagram
     }
 }
@@ -298,6 +299,35 @@ impl Draw for Start {
     }
 }
 
+/// The `End` of a railroad diagram
+#[derive(Debug)]
+pub struct End {}
+
+impl End {
+    #[must_use]
+    pub fn new() -> Self {
+        End {}
+    }
+}
+
+impl Draw for End {
+    fn entry_height(&self) -> usize {
+        0
+    }
+
+    fn height(&self) -> usize {
+        1
+    }
+
+    fn width(&self) -> usize {
+        1
+    }
+
+    fn draw(&self) -> Vec<String> {
+        vec![SYMBOL["END"].to_string()]
+    }
+}
+
 /// A `Terminal` node
 #[derive(Debug)]
 pub struct Terminal {
@@ -321,7 +351,7 @@ impl Draw for Terminal {
     }
 
     fn width(&self) -> usize {
-        self.text.len() + 2
+        self.text.chars().count() + 2
     }
 
     fn draw(&self) -> Vec<String> {
@@ -338,7 +368,7 @@ impl Draw for Terminal {
         // Text row
         diagram.push(format!(
             "{} {} {}",
-            SYMBOL["J_LEFT"], self.text, SYMBOL["L_VERT"]
+            SYMBOL["J_LEFT"], self.text, SYMBOL["J_RIGHT"]
         ));
         // Top row
         diagram.push(format!(
@@ -379,7 +409,7 @@ where
     }
 
     fn height(&self) -> usize {
-        self.inner.height()
+        self.inner.height() + 2
     }
 
     fn width(&self) -> usize {
@@ -387,8 +417,31 @@ where
     }
 
     fn draw(&self) -> Vec<String> {
-        // TODO: write function
-        vec![]
+        let mut diagram = self.inner.draw();
+        let height = diagram.len();
+        for i in 0..height {
+            if i == height / 2 {
+                diagram[i] = format!("{}{}{}", SYMBOL["J_DOWN"], diagram[i], SYMBOL["J_DOWN"]);
+            }
+            else if i > height / 2 {
+                diagram[i] = format!("{}{}{}", SYMBOL["L_VERT"], diagram[i], SYMBOL["L_VERT"]);
+            }
+            else {
+                diagram[i] = format!(" {} ", diagram[i])
+            }
+        }
+
+        let len_empty = diagram[0].chars().count();
+        diagram.insert(0, iter::repeat(' ').take(len_empty).collect::<String>());
+
+        let len_full = diagram[0].chars().count() - 2;
+        diagram.push(format!("{}{}{}",
+            SYMBOL["C_BL_RND"],
+            iter::repeat(SYMBOL["L_HORZ"]).take(len_full).collect::<String>(),
+            SYMBOL["C_BR_RND"]
+        ));
+
+        diagram
     }
 }
 
@@ -488,7 +541,7 @@ impl RailroadRenderer {
                 diagram.push(new_elem);
             }
         }
-        info!("{:?}", diagram);
+        diagram.push(Box::new(End {}));
         Ok(diagram)
     }
 
@@ -512,7 +565,18 @@ impl RailroadRenderer {
             RegEx::Alternation(a) => Ok(Box::new(Choice::<Box<dyn Draw>> {
                 inner: a.iter().map(|x| Self::generate_diagram_element(x, diagram).unwrap()).collect()
             })),
-            _ => Ok(Box::new(Terminal { text: String::new() })),
+            RegEx::Element(a) => {
+                let mut seq = Vec::new();
+                for i in a.iter() {
+                    let new_elem = Self::generate_diagram_element(i, diagram)?;
+                    seq.push(new_elem);
+                }
+                Ok(Box::new(Sequence::<Box<dyn Draw>>::new(seq)))
+            }
+            other => {
+                info!("Other {:?}", other);
+                Ok(Box::new(Terminal { text: String::new() }))
+            },
         }
     }
 

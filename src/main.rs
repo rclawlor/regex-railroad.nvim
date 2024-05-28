@@ -15,6 +15,7 @@ const _TEST_LITERAL: &str = r"This is a literal string";
 const _TEST_NORMAL: &str = "(a|b)+hello(cd){5,}";
 const _TEST_CHARACTER: &str = "[^aoeu_0-a]";
 const _TEST_OPTIONS: &str = "(ab|bc|cd)";
+const _TEST_REPEAT: &str = "(repeat){5}";
 
 #[derive(Debug)]
 struct StringFormat {
@@ -199,16 +200,22 @@ impl EventHandler {
                     let mut parser = RegExParser::new(&regex);
                     let parsed_regex = parser.parse()?;
                     info!("Parsed regular expression: {:?}", parsed_regex);
-                    let diagram = RailroadRenderer::generate_diagram(&parsed_regex)?;
-                    let text = RailroadRenderer::render_diagram(&diagram)?;
-                    info!("Successfully rendered diagram");
-                    let x = match RailroadRenderer::generate_diagram(&parsed_regex) {
-                        Ok(x) => info!("{:?}", x),
+                    let diagram = match RailroadRenderer::generate_diagram(&parsed_regex) {
+                        Ok(diagram) => diagram,
                         Err(e) => {
                             error!("{}", e);
                             panic!()
                         }
                     };
+                    info!("Successfully generated diagram");
+                    let text = match RailroadRenderer::render_diagram(&diagram) {
+                        Ok(text) => text,
+                        Err(e) => {
+                            error!("{}", e);
+                            panic!()
+                        }
+                    };
+                    info!("Successfully rendered diagram");
 
                     // Create neovim buffer and window
                     let buf = match self.nvim.call_function(
@@ -225,7 +232,7 @@ impl EventHandler {
                         // Increase height and width by 2 for whitespace padding
                         (
                             Value::from("width"),
-                            Value::from(text.iter().max_by_key(|x| x.len()).unwrap().len() + 2),
+                            Value::from(text[0].len() + 2),
                         ),
                         (Value::from("height"), Value::from(text.len() + 2)),
                         // TODO: allow styles to be set by the user
