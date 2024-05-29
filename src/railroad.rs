@@ -516,8 +516,35 @@ where
     }
 
     fn draw(&self) -> Vec<String> {
-        // TODO: write function
-        vec![]
+        let mut diagram = self.inner.draw();
+        let height = diagram.len();
+        for i in 0..height {
+            if i == height / 2 {
+                diagram[i] = format!("{}{}{}{}{}",
+                    SYM["J_UP"], SYM["L_HORZ"], diagram[i], SYM["L_HORZ"], SYM["J_UP"]
+                );
+            }
+            else if i < height / 2 {
+                diagram[i] = format!("{} {} {}", SYM["L_VERT"], diagram[i], SYM["L_VERT"]);
+            }
+            else {
+                diagram[i] = format!("  {}  ", diagram[i])
+            }
+        }
+
+        // Top loop
+        let len_full = diagram[0].chars().count() - 2;
+        diagram.insert(0, format!("{}{}{}",
+            SYM["C_TL_RND"],
+            repeat(SYM["L_HORZ"], len_full),
+            SYM["C_TR_RND"]
+        ));
+
+        // Bottom padding
+        let len_empty = diagram[0].chars().count();
+        diagram.push(repeat(' ', len_empty));
+
+        diagram
     }
 }
 
