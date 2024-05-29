@@ -15,7 +15,7 @@ const _TEST_LITERAL: &str = r"This is a literal string";
 const _TEST_NORMAL: &str = "(a|b)+hello(cd){5,}";
 const _TEST_CHARACTER: &str = "[^aoeu_0-a]";
 const _TEST_OPTIONS: &str = "(ab|bc|cd)";
-const _TEST_REPEAT: &str = "(repeat){5}";
+const _TEST_REPEAT: &str = "one(two){5,7}three";
 
 #[derive(Debug)]
 struct StringFormat {

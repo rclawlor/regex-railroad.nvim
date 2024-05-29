@@ -1,5 +1,5 @@
 use lazy_static::lazy_static;
-use std::collections::HashMap;
+use std::{collections::HashMap, usize};
 use std::iter;
 use tracing::info;
 
@@ -11,7 +11,7 @@ use crate::{
 const H_PADDING: usize = 2;
 
 lazy_static! {
-    static ref SYMBOL: HashMap<&'static str, char> = [
+    static ref SYM: HashMap<&'static str, char> = [
         ("START", '╟'),
         ("END", '╢'),
         ("CROSS", '┼'),
@@ -33,6 +33,12 @@ lazy_static! {
     .iter()
     .copied()
     .collect();
+}
+
+
+// Repeat character n times
+fn repeat(character: char, n: usize) -> String {
+    iter::repeat(character).take(n).collect::<String>()
 }
 
 pub trait Draw {
@@ -233,24 +239,41 @@ where
     fn draw(&self) -> Vec<String> {
         let mut diagram = vec![String::new()];
         for (n, child) in self.children.iter().enumerate() {
-            let node = child.draw();
+            let mut node = child.draw();
             let length = node.len();
 
-            // Add extra lines to top/bottom of diagram if necessary
+            for (a, b) in node.iter().enumerate() {
+                info!("Node {}: {}", a, b);
+            }
+
+            // Add extra lines to top/bottom of diagram if necessary...
             if length > diagram.len() {
                 let len = diagram[0].chars().count();
                 let empty = iter::repeat(' ').take(len).collect::<String>();
-                for i in 0..(length / 2) {
+                info!("Diagram length: {}", diagram.len());
+                for i in 0..((length - diagram.len()) / 2) {
                     diagram.insert(i, empty.clone());
                     diagram.push(empty.clone());
+                    info!("Diagram length: {}", diagram.len());
                 }
+                info!("node > diagram");
+            }
+            // ...or extra lines to top/bottom of new node
+            else if length < diagram.len() {
+                let len = node[0].chars().count();
+                let empty = iter::repeat(' ').take(len).collect::<String>();
+                for _i in 0..((diagram.len() - length) / 2) {
+                    node.insert(0, empty.clone());
+                    node.push(empty.clone());
+                }
+                info!("diagram > node");
             }
 
             if n > 0 {
                 // Add padding
                 let height = diagram.len();
                 let empty = iter::repeat(' ').take(H_PADDING).collect::<String>();
-                let line = iter::repeat(SYMBOL["L_HORZ"]).take(H_PADDING).collect::<String>();
+                let line = iter::repeat(SYM["L_HORZ"]).take(H_PADDING).collect::<String>();
                 for i in 0..height {
                     if i == (height - 1) / 2 {
                         diagram[i] = format!("{}{}", diagram[i], line);
@@ -258,12 +281,16 @@ where
                         diagram[i] = format!("{}{}", diagram[i], empty);
                     }
                 }
+                info!("Added padding");
             }
 
             // Append new node
-            for i in 0..length {
+            info!("Node {} - Diagram {}", node.len(), diagram.len());
+            for i in 0..diagram.len() {
                 diagram[i] = format!("{}{}", diagram[i], node[i]);
             }
+
+            info!("Finished node {}", n);
         }
 
         diagram
@@ -295,7 +322,7 @@ impl Draw for Start {
     }
 
     fn draw(&self) -> Vec<String> {
-        vec![SYMBOL["START"].to_string()]
+        vec![SYM["START"].to_string()]
     }
 }
 
@@ -324,7 +351,7 @@ impl Draw for End {
     }
 
     fn draw(&self) -> Vec<String> {
-        vec![SYMBOL["END"].to_string()]
+        vec![SYM["END"].to_string()]
     }
 }
 
@@ -359,25 +386,25 @@ impl Draw for Terminal {
         // Top row
         diagram.push(format!(
             "{}{}{}",
-            SYMBOL["C_TL_SQR"],
-            iter::repeat(SYMBOL["L_HORZ"])
+            SYM["C_TL_SQR"],
+            iter::repeat(SYM["L_HORZ"])
                 .take(self.width())
                 .collect::<String>(),
-            SYMBOL["C_TR_SQR"]
+            SYM["C_TR_SQR"]
         ));
         // Text row
         diagram.push(format!(
             "{} {} {}",
-            SYMBOL["J_LEFT"], self.text, SYMBOL["J_RIGHT"]
+            SYM["J_LEFT"], self.text, SYM["J_RIGHT"]
         ));
         // Top row
         diagram.push(format!(
             "{}{}{}",
-            SYMBOL["C_BL_SQR"],
-            iter::repeat(SYMBOL["L_HORZ"])
+            SYM["C_BL_SQR"],
+            iter::repeat(SYM["L_HORZ"])
                 .take(self.width())
                 .collect::<String>(),
-            SYMBOL["C_BR_SQR"]
+            SYM["C_BR_SQR"]
         ));
 
         diagram
@@ -421,24 +448,44 @@ where
         let height = diagram.len();
         for i in 0..height {
             if i == height / 2 {
-                diagram[i] = format!("{}{}{}", SYMBOL["J_DOWN"], diagram[i], SYMBOL["J_DOWN"]);
+                diagram[i] = format!("{}{}{}{}{}",
+                    SYM["J_DOWN"], SYM["L_HORZ"], diagram[i], SYM["L_HORZ"], SYM["J_DOWN"]
+                );
             }
             else if i > height / 2 {
-                diagram[i] = format!("{}{}{}", SYMBOL["L_VERT"], diagram[i], SYMBOL["L_VERT"]);
+                diagram[i] = format!("{} {} {}", SYM["L_VERT"], diagram[i], SYM["L_VERT"]);
             }
             else {
-                diagram[i] = format!(" {} ", diagram[i])
+                diagram[i] = format!("  {}  ", diagram[i])
             }
         }
 
+        // Top padding
         let len_empty = diagram[0].chars().count();
-        diagram.insert(0, iter::repeat(' ').take(len_empty).collect::<String>());
+        diagram.insert(0, repeat(' ', len_empty));
+        diagram.insert(0, repeat(' ', len_empty));
 
+        // Bottom loop
         let len_full = diagram[0].chars().count() - 2;
         diagram.push(format!("{}{}{}",
-            SYMBOL["C_BL_RND"],
-            iter::repeat(SYMBOL["L_HORZ"]).take(len_full).collect::<String>(),
-            SYMBOL["C_BR_RND"]
+            SYM["C_BL_RND"],
+            iter::repeat(SYM["L_HORZ"]).take(len_full).collect::<String>(),
+            SYM["C_BR_RND"]
+        ));
+
+        // Description of how many repeats
+        let desciption = match self.repetition {
+            RepetitionType::OrMore(n) => format!("{} or more", n),
+            RepetitionType::Exactly(n) => format!("Exactly {}", n),
+            RepetitionType::Between(n, m) => format!("{} to {}", n, m),
+            RepetitionType::ZeroOrOne => panic!("RepetitionType::ZeroOrOne should be parsed as Optional")
+        };
+        let padding_start = (diagram[0].len() - desciption.len()) / 2;
+        let padding_end = diagram[0].len() - padding_start;
+        diagram.push(format!("{}{}{}",
+            repeat(' ', padding_start),
+            desciption,
+            repeat(' ', padding_end)
         ));
 
         diagram
