@@ -19,6 +19,7 @@ lazy_static! {
         ("J_RIGHT", '├'),
         ("J_UP", '┴'),
         ("J_DOWN", '┬'),
+        ("A_DOWN", '▽'),
         ("L_HORZ", '─'),
         ("L_VERT", '│'),
         ("C_TL_SQR", '┌'),
@@ -237,7 +238,7 @@ where
     }
 
     fn draw(&self) -> Vec<String> {
-        let mut diagram = vec![String::new()];
+        let mut diagram: Vec<String> = vec![String::new()];
         for (n, child) in self.children.iter().enumerate() {
             let mut node = child.draw();
             let length = node.len();
@@ -248,6 +249,7 @@ where
 
             // Add extra lines to top/bottom of diagram if necessary...
             if length > diagram.len() {
+                info!("Node > Diagram");
                 let len = diagram[0].chars().count();
                 let empty = repeat(' ', len);
                 info!("Diagram length: {}", diagram.len());
@@ -256,17 +258,16 @@ where
                     diagram.push(empty.clone());
                     info!("Diagram length: {}", diagram.len());
                 }
-                info!("node > diagram");
             }
             // ...or extra lines to top/bottom of new node
             else if length < diagram.len() {
+                info!("Diagram > Node");
                 let len = node[0].chars().count();
                 let empty = repeat(' ', len);
                 for _i in 0..((diagram.len() - length) / 2) {
                     node.insert(0, empty.clone());
                     node.push(empty.clone());
                 }
-                info!("diagram > node");
             }
 
             if n > 0 {
@@ -370,7 +371,7 @@ impl Terminal {
 
 impl Draw for Terminal {
     fn entry_height(&self) -> usize {
-        2
+        1
     }
 
     fn height(&self) -> usize {
@@ -564,7 +565,7 @@ where
     N: Draw
 {
     fn entry_height(&self) -> usize {
-        self.inner.iter().max_entry_height()
+        self.inner.iter().total_height() / 2
     }
 
     fn height(&self) -> usize {
@@ -576,7 +577,64 @@ where
     }
 
     fn draw(&self) -> Vec<String> {
-        vec![]
+        let mut diagram: Vec<String> = Vec::new();
+        let choices = self.inner.len();
+        let odd = choices % 2 == 1;
+        let midpoint = choices / 2;
+        info!("{} {} {}", choices, midpoint, odd);
+
+        // Stack all choices vertically
+        for (i, node) in self.inner.iter().enumerate() { 
+            let sub_diagram = node.draw();
+            for x in &sub_diagram {
+                info!("{}", x);
+            }
+            for line in 0..sub_diagram.len() {
+                // Draw connection...
+                if line == node.entry_height() {
+                    info!("Midpoint {}", line);
+                    let (left_sym, right_sym) = if i == 0 {
+                        (SYM["C_TL_RND"], SYM["C_TR_RND"])
+                    } else if i == midpoint && odd {
+                        (SYM["CROSS"], SYM["CROSS"])
+                    } else if i == choices - 1 {
+                        (SYM["C_BL_RND"], SYM["C_BR_RND"])
+                    } else {
+                        (SYM["J_RIGHT"], SYM["J_LEFT"])
+                    };
+                    diagram.push(format!("{}{}{}",
+                        left_sym,
+                        sub_diagram[line],
+                        right_sym
+                    ));
+                }
+                // ...if first node and top or last row and bottom...
+                else if (line < node.entry_height() && i == 0) || (line > node.entry_height() && i == choices - 1) {
+                    diagram.push(format!(" {} ", sub_diagram[line]));
+                }
+                // ...otherwise add vertical line
+                else {
+                    diagram.push(format!("{}{}{}",
+                        SYM["L_VERT"],
+                        sub_diagram[line],
+                        SYM["L_VERT"]
+                    ));
+                }
+            }
+                
+            // Add vertical spacing if not the final node
+            if i != choices - 1 && !odd {
+                if i == (choices / 2) - 1 {
+                    diagram.push(format!("{}{}{}",
+                        SYM["J_LEFT"],
+                        repeat(' ', sub_diagram[0].chars().count()),
+                        SYM["J_RIGHT"]
+                    ));
+                }
+            }
+        }
+
+        diagram
     }
 }
 

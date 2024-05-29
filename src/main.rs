@@ -10,12 +10,7 @@ pub mod error;
 pub mod parser;
 pub mod railroad;
 pub mod text;
-
-const _TEST_LITERAL: &str = r"This is a literal string";
-const _TEST_NORMAL: &str = "(a|b)+hello(cd){5,}";
-const _TEST_CHARACTER: &str = "[^aoeu_0-a]";
-const _TEST_OPTIONS: &str = "(ab|bc|cd)";
-const _TEST_REPEAT: &str = "one(two){5,7}three";
+pub mod test;
 
 #[derive(Debug)]
 struct StringFormat {
@@ -207,7 +202,7 @@ impl EventHandler {
                             panic!()
                         }
                     };
-                    info!("Successfully generated diagram");
+                    info!("Successfully generated diagram: {:?}", diagram);
                     let text = match RailroadRenderer::render_diagram(&diagram) {
                         Ok(text) => text,
                         Err(e) => {
