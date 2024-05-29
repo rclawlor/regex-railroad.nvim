@@ -249,7 +249,7 @@ where
             // Add extra lines to top/bottom of diagram if necessary...
             if length > diagram.len() {
                 let len = diagram[0].chars().count();
-                let empty = iter::repeat(' ').take(len).collect::<String>();
+                let empty = repeat(' ', len);
                 info!("Diagram length: {}", diagram.len());
                 for i in 0..((length - diagram.len()) / 2) {
                     diagram.insert(i, empty.clone());
@@ -261,7 +261,7 @@ where
             // ...or extra lines to top/bottom of new node
             else if length < diagram.len() {
                 let len = node[0].chars().count();
-                let empty = iter::repeat(' ').take(len).collect::<String>();
+                let empty = repeat(' ', len);
                 for _i in 0..((diagram.len() - length) / 2) {
                     node.insert(0, empty.clone());
                     node.push(empty.clone());
@@ -272,8 +272,8 @@ where
             if n > 0 {
                 // Add padding
                 let height = diagram.len();
-                let empty = iter::repeat(' ').take(H_PADDING).collect::<String>();
-                let line = iter::repeat(SYM["L_HORZ"]).take(H_PADDING).collect::<String>();
+                let empty = repeat(' ', H_PADDING);
+                let line = repeat(SYM["L_HORZ"], H_PADDING);
                 for i in 0..height {
                     if i == (height - 1) / 2 {
                         diagram[i] = format!("{}{}", diagram[i], line);
@@ -387,9 +387,7 @@ impl Draw for Terminal {
         diagram.push(format!(
             "{}{}{}",
             SYM["C_TL_SQR"],
-            iter::repeat(SYM["L_HORZ"])
-                .take(self.width())
-                .collect::<String>(),
+            repeat(SYM["L_HORZ"], self.width()),
             SYM["C_TR_SQR"]
         ));
         // Text row
@@ -401,9 +399,7 @@ impl Draw for Terminal {
         diagram.push(format!(
             "{}{}{}",
             SYM["C_BL_SQR"],
-            iter::repeat(SYM["L_HORZ"])
-                .take(self.width())
-                .collect::<String>(),
+            repeat(SYM["L_HORZ"], self.width()),
             SYM["C_BR_SQR"]
         ));
 
@@ -469,7 +465,7 @@ where
         let len_full = diagram[0].chars().count() - 2;
         diagram.push(format!("{}{}{}",
             SYM["C_BL_RND"],
-            iter::repeat(SYM["L_HORZ"]).take(len_full).collect::<String>(),
+            repeat(SYM["L_HORZ"], len_full),
             SYM["C_BR_RND"]
         ));
 
