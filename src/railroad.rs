@@ -241,15 +241,32 @@ where
         let mut diagram: Vec<String> = vec![String::new()];
         for (n, child) in self.children.iter().enumerate() {
             let mut node = child.draw();
-            let length = node.len();
 
             for (a, b) in node.iter().enumerate() {
                 info!("Node {} {}: {}", a, b.chars().count(), b);
             }
 
-            for (a, b) in diagram.iter().enumerate() {
-                info!("Diagram {} {}: {}", a, b.chars().count(), b);
+            // Ensure connection of new node is vertically centred
+            if child.height() % 2 == 0 {
+                info!("Correcting offset...");
+                // Check if entry height is above or below midpoint
+                info!("{} {}", child.entry_height(), child.height());
+                if child.entry_height() < child.height() / 2 {
+                    for _ in 0..(child.height() / 2 - child.entry_height()) {
+                        node.insert(0, repeat(' ', node[0].chars().count()));
+                    }
+                } else {
+                    for _ in 0..(1 + child.entry_height() - child.height() / 2) {
+                        node.push(repeat(' ', node[0].chars().count()));
+                    }
+                }
             }
+
+            for (a, b) in node.iter().enumerate() {
+                info!("Node {} {}: {}", a, b.chars().count(), b);
+            }
+
+            let length = node.len();
 
             // Add extra lines to top/bottom of diagram if necessary...
             if length > diagram.len() {
@@ -437,7 +454,7 @@ where
     }
 
     fn height(&self) -> usize {
-        self.inner.height() + 4
+        self.inner.height() + 1
     }
 
     fn width(&self) -> usize {
@@ -460,10 +477,6 @@ where
                 diagram[i] = format!("  {}  ", diagram[i])
             }
         }
-
-        // Top padding
-        let len_empty = diagram[0].chars().count();
-        diagram.insert(0, repeat(' ', len_empty));
 
         // Description of how many repeats
         let desciption = match self.repetition {
@@ -502,15 +515,15 @@ where
     N: Draw,
 {
     fn entry_height(&self) -> usize {
-        self.inner.entry_height()
+        self.inner.entry_height() + 1
     }
 
     fn height(&self) -> usize {
-        self.inner.height()
+        self.inner.height() + 1
     }
 
     fn width(&self) -> usize {
-        self.inner.width()
+        self.inner.width() + 2
     }
 
     fn draw(&self) -> Vec<String> {
@@ -538,10 +551,6 @@ where
             SYM["C_TR_RND"]
         ));
 
-        // Bottom padding
-        let len_empty = diagram[0].chars().count();
-        diagram.push(repeat(' ', len_empty));
-
         diagram
     }
 }
@@ -566,7 +575,7 @@ where
     }
 
     fn height(&self) -> usize {
-        self.inner.iter().max_height()
+        self.inner.iter().total_height()
     }
 
     fn width(&self) -> usize {
@@ -577,7 +586,8 @@ where
         let mut diagram: Vec<String> = Vec::new();
         let choices = self.inner.len();
         let odd = choices % 2 == 1;
-        let midpoint = choices / 2;
+        // Zero-indexed midpoint
+        let midpoint = (self.inner.iter().total_height() + 1) / 2 - 1;
         let width = self.inner.iter().max_width();
         info!("{} {} {}", choices, midpoint, odd);
 
@@ -589,7 +599,7 @@ where
             // Ensure all nodes have the same width
             let left_pad = (width - sub_len) / 2;
             let right_pad = usize::div_ceil(width - sub_len, 2);
-            info!("W{} S{} L{} R{}", width, sub_len, left_pad, right_pad);
+            info!("W{} S{} L{} R{} H{}", width, sub_len, left_pad, right_pad, node.entry_height());
 
             for (x, y) in sub_diagram.iter().enumerate() {
                 info!("Sub {}: {}", x, y);
@@ -600,7 +610,7 @@ where
                     info!("Midpoint {}", line);
                     let (left_sym, right_sym) = if i == 0 {
                         (SYM["C_TL_RND"], SYM["C_TR_RND"])
-                    } else if i == midpoint && odd {
+                    } else if diagram.len() == midpoint {
                         (SYM["CROSS"], SYM["CROSS"])
                     } else if i == choices - 1 {
                         (SYM["C_BL_RND"], SYM["C_BR_RND"])
@@ -615,6 +625,13 @@ where
                         right_sym
                     ));
                 }
+                else if diagram.len() == midpoint {
+                    diagram.push(format!("{}{}{}",
+                        SYM["J_LEFT"],
+                        sub_diagram[line],
+                        SYM["J_RIGHT"]
+                    ));
+                }
                 // ...if first node and top or last row and bottom...
                 else if (line < node.entry_height() && i == 0) || (line > node.entry_height() && i == choices - 1) {
                     diagram.push(format!(" {}{}{} ", repeat(' ', left_pad), sub_diagram[line], repeat(' ', right_pad)));
@@ -627,17 +644,6 @@ where
                         sub_diagram[line],
                         repeat(' ', right_pad),
                         SYM["L_VERT"]
-                    ));
-                }
-            }
-                
-            // Add vertical spacing if not the final node
-            if i != choices - 1 && !odd {
-                if i == (choices / 2) - 1 {
-                    diagram.push(format!("{}{}{}",
-                        SYM["J_LEFT"],
-                        repeat(' ', width),
-                        SYM["J_RIGHT"]
                     ));
                 }
             }
