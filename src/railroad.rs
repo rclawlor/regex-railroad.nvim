@@ -244,7 +244,11 @@ where
             let length = node.len();
 
             for (a, b) in node.iter().enumerate() {
-                info!("Node {}: {}", a, b);
+                info!("Node {} {}: {}", a, b.chars().count(), b);
+            }
+
+            for (a, b) in diagram.iter().enumerate() {
+                info!("Diagram {} {}: {}", a, b.chars().count(), b);
             }
 
             // Add extra lines to top/bottom of diagram if necessary...
@@ -379,7 +383,7 @@ impl Draw for Terminal {
     }
 
     fn width(&self) -> usize {
-        self.text.chars().count() + 2
+        self.text.chars().count() + 4
     }
 
     fn draw(&self) -> Vec<String> {
@@ -388,7 +392,7 @@ impl Draw for Terminal {
         diagram.push(format!(
             "{}{}{}",
             SYM["C_TL_SQR"],
-            repeat(SYM["L_HORZ"], self.width()),
+            repeat(SYM["L_HORZ"], self.width() - 2),
             SYM["C_TR_SQR"]
         ));
         // Text row
@@ -400,7 +404,7 @@ impl Draw for Terminal {
         diagram.push(format!(
             "{}{}{}",
             SYM["C_BL_SQR"],
-            repeat(SYM["L_HORZ"], self.width()),
+            repeat(SYM["L_HORZ"], self.width() - 2),
             SYM["C_BR_SQR"]
         ));
 
@@ -433,11 +437,11 @@ where
     }
 
     fn height(&self) -> usize {
-        self.inner.height() + 2
+        self.inner.height() + 4
     }
 
     fn width(&self) -> usize {
-        self.inner.width()
+        self.inner.width() + 4
     }
 
     fn draw(&self) -> Vec<String> {
@@ -460,29 +464,22 @@ where
         // Top padding
         let len_empty = diagram[0].chars().count();
         diagram.insert(0, repeat(' ', len_empty));
-        diagram.insert(0, repeat(' ', len_empty));
-
-        // Bottom loop
-        let len_full = diagram[0].chars().count() - 2;
-        diagram.push(format!("{}{}{}",
-            SYM["C_BL_RND"],
-            repeat(SYM["L_HORZ"], len_full),
-            SYM["C_BR_RND"]
-        ));
 
         // Description of how many repeats
         let desciption = match self.repetition {
-            RepetitionType::OrMore(n) => format!("{} or more", n),
-            RepetitionType::Exactly(n) => format!("Exactly {}", n),
-            RepetitionType::Between(n, m) => format!("{} to {}", n, m),
+            RepetitionType::OrMore(n) => format!(" {}+ ", n),
+            RepetitionType::Exactly(n) => format!(" {} ", n),
+            RepetitionType::Between(n, m) => format!(" {}-{} ", n, m),
             RepetitionType::ZeroOrOne => panic!("RepetitionType::ZeroOrOne should be parsed as Optional")
         };
-        let padding_start = (diagram[0].len() - desciption.len()) / 2;
-        let padding_end = diagram[0].len() - padding_start;
-        diagram.push(format!("{}{}{}",
-            repeat(' ', padding_start),
+        let padding = (diagram[0].chars().count() - desciption.chars().count()).checked_sub(2).unwrap_or(0);
+
+        // Bottom loop
+        diagram.push(format!("{}{}{}{}",
+            SYM["C_BL_RND"],
             desciption,
-            repeat(' ', padding_end)
+            repeat(SYM["L_HORZ"], padding),
+            SYM["C_BR_RND"]
         ));
 
         diagram
@@ -581,13 +578,21 @@ where
         let choices = self.inner.len();
         let odd = choices % 2 == 1;
         let midpoint = choices / 2;
+        let width = self.inner.iter().max_width();
         info!("{} {} {}", choices, midpoint, odd);
 
         // Stack all choices vertically
         for (i, node) in self.inner.iter().enumerate() { 
             let sub_diagram = node.draw();
-            for x in &sub_diagram {
-                info!("{}", x);
+            let sub_len = sub_diagram[0].chars().count();
+
+            // Ensure all nodes have the same width
+            let left_pad = (width - sub_len) / 2;
+            let right_pad = usize::div_ceil(width - sub_len, 2);
+            info!("W{} S{} L{} R{}", width, sub_len, left_pad, right_pad);
+
+            for (x, y) in sub_diagram.iter().enumerate() {
+                info!("Sub {}: {}", x, y);
             }
             for line in 0..sub_diagram.len() {
                 // Draw connection...
@@ -602,21 +607,25 @@ where
                     } else {
                         (SYM["J_RIGHT"], SYM["J_LEFT"])
                     };
-                    diagram.push(format!("{}{}{}",
+                    diagram.push(format!("{}{}{}{}{}",
                         left_sym,
+                        repeat(SYM["L_HORZ"], left_pad),
                         sub_diagram[line],
+                        repeat(SYM["L_HORZ"], right_pad),
                         right_sym
                     ));
                 }
                 // ...if first node and top or last row and bottom...
                 else if (line < node.entry_height() && i == 0) || (line > node.entry_height() && i == choices - 1) {
-                    diagram.push(format!(" {} ", sub_diagram[line]));
+                    diagram.push(format!(" {}{}{} ", repeat(' ', left_pad), sub_diagram[line], repeat(' ', right_pad)));
                 }
                 // ...otherwise add vertical line
                 else {
-                    diagram.push(format!("{}{}{}",
+                    diagram.push(format!("{}{}{}{}{}",
                         SYM["L_VERT"],
+                        repeat(' ', left_pad),
                         sub_diagram[line],
+                        repeat(' ', right_pad),
                         SYM["L_VERT"]
                     ));
                 }
@@ -627,7 +636,7 @@ where
                 if i == (choices / 2) - 1 {
                     diagram.push(format!("{}{}{}",
                         SYM["J_LEFT"],
-                        repeat(' ', sub_diagram[0].chars().count()),
+                        repeat(' ', width),
                         SYM["J_RIGHT"]
                     ));
                 }
