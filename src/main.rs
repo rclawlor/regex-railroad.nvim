@@ -227,7 +227,7 @@ impl EventHandler {
                         // Increase height and width by 2 for whitespace padding
                         (
                             Value::from("width"),
-                            Value::from(text[0].len() + 2),
+                            Value::from(text[0].chars().count() + 2),
                         ),
                         (Value::from("height"), Value::from(text.len() + 2)),
                         // TODO: allow styles to be set by the user
