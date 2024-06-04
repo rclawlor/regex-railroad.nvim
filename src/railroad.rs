@@ -3,6 +3,7 @@ use std::{collections::HashMap, usize};
 use std::iter;
 use tracing::info;
 
+use crate::parser::AnchorType;
 use crate::{
     error::Error,
     parser::{RegEx, RepetitionType},
@@ -711,7 +712,20 @@ impl RailroadRenderer {
                     seq.push(new_elem);
                 }
                 Ok(Box::new(Sequence::<Box<dyn Draw>>::new(seq)))
-            }
+            },
+            RegEx::Anchor(a) => {
+                match a {
+                    AnchorType::Start => {
+                        Ok(Box::new(Terminal { text: String::from("START")}))
+                    },
+                    AnchorType::End => {
+                        Ok(Box::new(Terminal { text: String::from("END")}))
+                    },
+                    _ => {
+                        Ok(Box::new(Terminal { text: String::from("")}))
+                    }
+                }
+            },
             other => {
                 info!("Other {:?}", other);
                 Ok(Box::new(Terminal { text: String::new() }))

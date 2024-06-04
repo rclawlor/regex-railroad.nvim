@@ -3,7 +3,7 @@ use tracing::{error, info};
 
 use crate::{
     error::Error,
-    parser::{CharacterType, RegEx, RepetitionType},
+    parser::{AnchorType, CharacterType, RegEx, RepetitionType},
 };
 
 type HighlightRegion = (usize, usize, usize);
@@ -75,6 +75,13 @@ impl TextRenderer {
     ) -> Result<String, Error> {
         info!("Rendering text element...");
         match tree {
+            RegEx::Anchor(a) => {
+                match a {
+                    AnchorType::Start => Ok(String::from("Start")),
+                    AnchorType::End => Ok(String::from("End")),
+                    _ => panic!()
+                }
+            },
             RegEx::Element(a) => {
                 let mut msg = "".to_string();
                 for i in a.iter() {

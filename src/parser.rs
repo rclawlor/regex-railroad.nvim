@@ -1,5 +1,6 @@
 use crate::error::Error;
 use lazy_static::lazy_static;
+use tracing::info;
 
 lazy_static! {
     static ref SPECIAL_CHARS: Vec<char> = vec!['(', ')', '+', '*', '$', '|', '^', '{', '}'];
@@ -11,6 +12,7 @@ pub enum RegEx {
     Repetition(RepetitionType, Box<RegEx>),
     Alternation(Vec<Box<RegEx>>),
     Character(CharacterType),
+    Anchor(AnchorType),
     Terminal(String),
 }
 
@@ -28,6 +30,14 @@ pub enum CharacterType {
     Not(Vec<Box<CharacterType>>),
     Between(Box<CharacterType>, Box<CharacterType>),
     Terminal(char),
+}
+
+#[derive(Eq, PartialEq, Debug)]
+pub enum AnchorType {
+    Start,
+    End,
+    WordBoundary,
+    NotWordBoundary
 }
 
 pub struct RegExParser {
@@ -180,7 +190,20 @@ impl RegExParser {
             let a = self.character()?;
             self.consume(']').unwrap();
             Ok(RegEx::Character(a))
-        } else {
+        } else if SPECIAL_CHARS.contains(&self.peek()) {
+            match self.peek() {
+                '^' => {
+                    self.consume('^')?;
+                    Ok(RegEx::Anchor(AnchorType::Start))
+                },
+                '$' => {
+                    self.consume('$')?;
+                    Ok(RegEx::Anchor(AnchorType::End))
+                },
+                _ => Ok(RegEx::Terminal(String::from("")))
+            }
+        }
+        else {
             let mut string = String::from("");
             while self.more() && !SPECIAL_CHARS.contains(&self.peek()) {
                 string = format!("{}{}", string, self.next()?);
