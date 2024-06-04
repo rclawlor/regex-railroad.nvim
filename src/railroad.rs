@@ -276,17 +276,13 @@ where
                 }
             }
 
-            for (a, b) in node.iter().enumerate() {
-                info!("Node {} {}: {}", a, b.chars().count(), b);
-            }
-
             if n > 0 {
                 // Add padding
                 let height = diagram.len();
                 let empty = repeat(' ', H_PADDING);
                 let line = repeat(SYM["L_HORZ"], H_PADDING);
                 for i in 0..height {
-                    if i == (height - 1) / 2 {
+                    if i == exit_height {
                         diagram[i] = format!("{}{}", diagram[i], line);
                     } else {
                         diagram[i] = format!("{}{}", diagram[i], empty);
@@ -299,6 +295,7 @@ where
             info!("Node {} - Diagram {}", node.len(), diagram.len());
             for i in 0..diagram.len() {
                 diagram[i] = format!("{}{}", diagram[i], node[i]);
+                info!("Diagram {}: {}", i, diagram[i]);
             }
 
             info!("Finished node {}", n);
@@ -453,18 +450,24 @@ where
     fn draw(&self) -> Vec<String> {
         let mut diagram = self.inner.draw();
         let height = diagram.len();
+        info!("Entry height: {}", self.entry_height());
+        // Iterate through inner node
         for i in 0..height {
-            if i == height / 2 {
+            if i == self.entry_height() {
                 diagram[i] = format!("{}{}{}{}{}",
                     SYM["J_DOWN"], SYM["L_HORZ"], diagram[i], SYM["L_HORZ"], SYM["J_DOWN"]
                 );
             }
-            else if i > height / 2 {
+            else if i > self.entry_height() {
                 diagram[i] = format!("{} {} {}", SYM["L_VERT"], diagram[i], SYM["L_VERT"]);
             }
             else {
                 diagram[i] = format!("  {}  ", diagram[i])
             }
+        }
+
+        for (i, n) in diagram.iter().enumerate() {
+            info!("Repetition {}: {}", i, n);
         }
 
         // Description of how many repeats
@@ -483,6 +486,10 @@ where
             repeat(SYM["L_HORZ"], padding),
             SYM["C_BR_RND"]
         ));
+
+        for (i, n) in diagram.iter().enumerate() {
+            info!("Repetition {}: {}", i, n);
+        }
 
         diagram
     }
@@ -560,7 +567,7 @@ where
     N: Draw
 {
     fn entry_height(&self) -> usize {
-        self.inner.iter().total_height() / 2
+        (self.inner.iter().total_height() - 1) / 2
     }
 
     fn height(&self) -> usize {
