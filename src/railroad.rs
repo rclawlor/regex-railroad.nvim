@@ -239,6 +239,7 @@ where
 
     fn draw(&self) -> Vec<String> {
         let mut diagram: Vec<String> = vec![String::new()];
+        let mut exit_height: usize = 0;
         for (n, child) in self.children.iter().enumerate() {
             let mut node = child.draw();
 
@@ -246,49 +247,37 @@ where
                 info!("Node {} {}: {}", a, b.chars().count(), b);
             }
 
-            // Ensure connection of new node is vertically centred
-            if child.height() % 2 == 0 {
-                info!("Correcting offset...");
-                // Check if entry height is above or below midpoint
-                info!("{} {}", child.entry_height(), child.height());
-                if child.entry_height() < child.height() / 2 {
-                    for _ in 0..(child.height() / 2 - child.entry_height()) {
-                        node.insert(0, repeat(' ', node[0].chars().count()));
-                    }
-                } else {
-                    for _ in 0..(1 + child.entry_height() - child.height() / 2) {
-                        node.push(repeat(' ', node[0].chars().count()));
-                    }
+            // Ensure exit of previous node aligns with entry of new node
+            if exit_height < child.entry_height() {
+                let empty = repeat(' ', diagram[0].chars().count());
+                for _ in 0..(child.entry_height() - exit_height) {
+                    diagram.insert(0, empty.clone());
+                }
+                exit_height = child.entry_height();
+            }
+            else if child.entry_height() < exit_height {
+                let empty = repeat(' ', node[0].chars().count());
+                for _ in 0..(exit_height - child.entry_height()) {
+                    node.insert(0, empty.clone());
+                }
+            }
+
+            // Add necessary padding to align new node
+            if node.len() < diagram.len() {
+                let empty = repeat(' ', node[0].chars().count());
+                for _ in 0..(diagram.len() - node.len()) {
+                    node.push(empty.clone());
+                }
+            }
+            else if diagram.len() < node.len() {
+                let empty = repeat(' ', diagram[0].chars().count());
+                for _ in 0..(node.len() - diagram.len()) {
+                    diagram.push(empty.clone());
                 }
             }
 
             for (a, b) in node.iter().enumerate() {
                 info!("Node {} {}: {}", a, b.chars().count(), b);
-            }
-
-            let length = node.len();
-
-            // Add extra lines to top/bottom of diagram if necessary...
-            if length > diagram.len() {
-                info!("Node > Diagram");
-                let len = diagram[0].chars().count();
-                let empty = repeat(' ', len);
-                info!("Diagram length: {}", diagram.len());
-                for i in 0..((length - diagram.len()) / 2) {
-                    diagram.insert(i, empty.clone());
-                    diagram.push(empty.clone());
-                    info!("Diagram length: {}", diagram.len());
-                }
-            }
-            // ...or extra lines to top/bottom of new node
-            else if length < diagram.len() {
-                info!("Diagram > Node");
-                let len = node[0].chars().count();
-                let empty = repeat(' ', len);
-                for _i in 0..((diagram.len() - length) / 2) {
-                    node.insert(0, empty.clone());
-                    node.push(empty.clone());
-                }
             }
 
             if n > 0 {
