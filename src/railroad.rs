@@ -20,13 +20,22 @@ lazy_static! {
         ("J_RIGHT", '├'),
         ("J_UP", '┴'),
         ("J_DOWN", '┬'),
-        ("A_DOWN", '▽'),
+        ("J_LEFT_B", '┨'),
+        ("J_RIGHT_B", '┠'),
+        ("J_UP_B", '┷'),
+        ("J_DOWN_B", '┯'),
         ("L_HORZ", '─'),
         ("L_VERT", '│'),
+        ("L_HORZ_B", '━'),
+        ("L_VERT_B", '┃'),
         ("C_TL_SQR", '┌'),
         ("C_TR_SQR", '┐'),
         ("C_BL_SQR", '└'),
         ("C_BR_SQR", '┘'),
+        ("C_TL_SQR_B", '┏'),
+        ("C_TR_SQR_B", '┓'),
+        ("C_BL_SQR_B", '┗'),
+        ("C_BR_SQR_B", '┛'),
         ("C_TL_RND", '╭'),
         ("C_TR_RND", '╮'),
         ("C_BL_RND", '╰'),
@@ -416,6 +425,58 @@ impl Draw for Terminal {
     }
 }
 
+/// An `Anchor` node
+#[derive(Debug)]
+pub struct Anchor {
+    text: String,
+}
+
+impl Anchor {
+    #[must_use]
+    pub fn new(text: String) -> Self {
+        Anchor { text }
+    }
+}
+
+impl Draw for Anchor {
+    fn entry_height(&self) -> usize {
+        1
+    }
+
+    fn height(&self) -> usize {
+        3
+    }
+
+    fn width(&self) -> usize {
+        self.text.chars().count() + 2
+    }
+
+    fn draw(&self) -> Vec<String> {
+        let mut diagram = Vec::new();
+        // Top row
+        diagram.push(format!(
+            "{}{}{}",
+            SYM["C_TL_SQR_B"],
+            repeat(SYM["L_HORZ_B"], self.width() - 2),
+            SYM["C_TR_SQR_B"]
+        ));
+        // Text row
+        diagram.push(format!(
+            "{}{}{}",
+            SYM["J_LEFT_B"], self.text, SYM["J_RIGHT_B"]
+        ));
+        // Top row
+        diagram.push(format!(
+            "{}{}{}",
+            SYM["C_BL_SQR_B"],
+            repeat(SYM["L_HORZ_B"], self.width() - 2),
+            SYM["C_BR_SQR_B"]
+        ));
+
+        diagram
+    }
+}
+
 /// A `Repetition` of a node
 pub struct Repetition<N> {
     inner: N,
@@ -716,13 +777,13 @@ impl RailroadRenderer {
             RegEx::Anchor(a) => {
                 match a {
                     AnchorType::Start => {
-                        Ok(Box::new(Terminal { text: String::from("START")}))
+                        Ok(Box::new(Anchor { text: String::from("LINE START")}))
                     },
                     AnchorType::End => {
-                        Ok(Box::new(Terminal { text: String::from("END")}))
+                        Ok(Box::new(Anchor { text: String::from("LINE END")}))
                     },
                     _ => {
-                        Ok(Box::new(Terminal { text: String::from("")}))
+                        Ok(Box::new(Anchor { text: String::from("")}))
                     }
                 }
             },
