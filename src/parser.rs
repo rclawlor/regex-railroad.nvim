@@ -287,16 +287,21 @@ impl RegExParser {
                 }
             }
             other => {
-                self.consume(other).unwrap();
+                info!("Character {}", other);
+                self.consume(other)?;
                 CharacterType::Terminal(other)
             }
         };
         if self.peek() == '-' {
-            self.consume('-').unwrap();
-            Ok(Box::new(CharacterType::Between(
-                Box::new(c),
-                self.next_character()?,
-            )))
+            self.consume('-')?;
+            if self.peek() == ']' {
+                Ok(Box::new(CharacterType::Terminal(']')))
+            } else {
+                Ok(Box::new(CharacterType::Between(
+                    Box::new(c),
+                    self.next_character()?,
+                )))
+            }
         } else {
             Ok(Box::new(c))
         }
