@@ -202,8 +202,7 @@ impl<N> Sequence<N> {
     #[must_use]
     pub fn new(children: Vec<N>) -> Self {
         Self {
-            children,
-            ..Self::default()
+            children
         }
     }
 
@@ -258,44 +257,49 @@ where
             }
 
             // Ensure exit of previous node aligns with entry of new node
-            if exit_height < child.entry_height() {
-                let empty = repeat(' ', diagram[0].chars().count());
-                for _ in 0..(child.entry_height() - exit_height) {
-                    diagram.insert(0, empty.clone());
-                }
-                exit_height = child.entry_height();
-            }
-            else if child.entry_height() < exit_height {
-                let empty = repeat(' ', node[0].chars().count());
-                for _ in 0..(exit_height - child.entry_height()) {
-                    node.insert(0, empty.clone());
-                }
+            match child.entry_height() {
+                child_height if exit_height < child_height => {
+                    let empty = repeat(' ', diagram[0].chars().count());
+                    for _ in 0..(child.entry_height() - exit_height) {
+                        diagram.insert(0, empty.clone());
+                    }
+                    exit_height = child.entry_height();
+                },
+                child_height if child_height < exit_height => {
+                    let empty = repeat(' ', node[0].chars().count());
+                    for _ in 0..(exit_height - child.entry_height()) {
+                        node.insert(0, empty.clone());
+                    }
+                },
+                _ => ()
             }
 
             // Add necessary padding to align new node
-            if node.len() < diagram.len() {
-                let empty = repeat(' ', node[0].chars().count());
-                for _ in 0..(diagram.len() - node.len()) {
-                    node.push(empty.clone());
-                }
-            }
-            else if diagram.len() < node.len() {
-                let empty = repeat(' ', diagram[0].chars().count());
-                for _ in 0..(node.len() - diagram.len()) {
-                    diagram.push(empty.clone());
-                }
+            match diagram.len() {
+                diagram_len if node.len() < diagram_len => {
+                    let empty = repeat(' ', node[0].chars().count());
+                    for _ in 0..(diagram_len - node.len()) {
+                        node.push(empty.clone());
+                    }
+                },
+                diagram_len if diagram_len < node.len() => {
+                    let empty = repeat(' ', diagram[0].chars().count());
+                    for _ in 0..(node.len() - diagram_len) {
+                        diagram.push(empty.clone());
+                    }
+                },
+                _ => ()
             }
 
             if n > 0 {
                 // Add padding
-                let height = diagram.len();
                 let empty = repeat(' ', H_PADDING);
                 let line = repeat(SYM["L_HORZ"], H_PADDING);
-                for i in 0..height {
+                for (i, d) in diagram.iter_mut().enumerate() {
                     if i == exit_height {
-                        diagram[i] = format!("{}{}", diagram[i], line);
+                        *d = format!("{}{}", d, line);
                     } else {
-                        diagram[i] = format!("{}{}", diagram[i], empty);
+                        *d = format!("{}{}", *d, empty);
                     }
                 }
                 info!("Added padding");
@@ -326,6 +330,12 @@ impl Start {
     }
 }
 
+impl Default for Start {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Draw for Start {
     fn entry_height(&self) -> usize {
         0
@@ -352,6 +362,12 @@ impl End {
     #[must_use]
     pub fn new() -> Self {
         End {}
+    }
+}
+
+impl Default for End {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -511,20 +527,19 @@ where
 
     fn draw(&self) -> Vec<String> {
         let mut diagram = self.inner.draw();
-        let height = diagram.len();
         info!("Entry height: {}", self.entry_height());
         // Iterate through inner node
-        for i in 0..height {
-            if i == self.entry_height() {
-                diagram[i] = format!("{}{}{}{}{}",
-                    SYM["J_DOWN"], SYM["L_HORZ"], diagram[i], SYM["L_HORZ"], SYM["J_DOWN"]
-                );
-            }
-            else if i > self.entry_height() {
-                diagram[i] = format!("{} {} {}", SYM["L_VERT"], diagram[i], SYM["L_VERT"]);
-            }
-            else {
-                diagram[i] = format!("  {}  ", diagram[i])
+        for (i, d) in diagram.iter_mut().enumerate() {
+            match self.entry_height() {
+                height if height == i => {
+                    *d = format!("{}{}{}{}{}",
+                        SYM["J_DOWN"], SYM["L_HORZ"], *d, SYM["L_HORZ"], SYM["J_DOWN"]
+                    );
+                },
+                height if height < i => {
+                    *d = format!("{} {} {}", SYM["L_VERT"], *d, SYM["L_VERT"]);
+                },
+                _ => *d = format!("  {}  ", *d)
             }
         }
 
@@ -539,7 +554,7 @@ where
             RepetitionType::Between(n, m) => format!(" {}-{} ", n, m),
             RepetitionType::ZeroOrOne => panic!("RepetitionType::ZeroOrOne should be parsed as Optional")
         };
-        let padding = (diagram[0].chars().count() - desciption.chars().count()).checked_sub(2).unwrap_or(0);
+        let padding = (diagram[0].chars().count() - desciption.chars().count()).saturating_sub(2);
 
         // Bottom loop
         diagram.push(format!("{}{}{}{}",
@@ -587,17 +602,17 @@ where
     fn draw(&self) -> Vec<String> {
         let mut diagram = self.inner.draw();
         let height = diagram.len();
-        for i in 0..height {
-            if i == height / 2 {
-                diagram[i] = format!("{}{}{}{}{}",
-                    SYM["J_UP"], SYM["L_HORZ"], diagram[i], SYM["L_HORZ"], SYM["J_UP"]
-                );
-            }
-            else if i < height / 2 {
-                diagram[i] = format!("{} {} {}", SYM["L_VERT"], diagram[i], SYM["L_VERT"]);
-            }
-            else {
-                diagram[i] = format!("  {}  ", diagram[i])
+        for (i, d) in diagram.iter_mut().enumerate() {
+            match i {
+                _ if i == height / 2 => {
+                    *d = format!("{}{}{}{}{}",
+                        SYM["J_UP"], SYM["L_HORZ"], *d, SYM["L_HORZ"], SYM["J_UP"]
+                    );   
+                },
+                _ if i < height / 2 => {
+                    *d = format!("{} {} {}", SYM["L_VERT"], *d, SYM["L_VERT"]);
+                },
+                _ => *d = format!("  {}  ", *d)
             }
         }
 
@@ -662,9 +677,9 @@ where
             for (x, y) in sub_diagram.iter().enumerate() {
                 info!("Sub {}: {}", x, y);
             }
-            for line in 0..sub_diagram.len() {
+            for (n, line) in sub_diagram.iter().enumerate() {
                 // Draw connection...
-                if line == node.entry_height() {
+                if n == node.entry_height() {
                     info!("Midpoint {}", line);
                     let (left_sym, right_sym) = if i == 0 {
                         (SYM["C_TL_RND"], SYM["C_TR_RND"])
@@ -678,7 +693,7 @@ where
                     diagram.push(format!("{}{}{}{}{}",
                         left_sym,
                         repeat(SYM["L_HORZ"], left_pad),
-                        sub_diagram[line],
+                        line,
                         repeat(SYM["L_HORZ"], right_pad),
                         right_sym
                     ));
@@ -686,20 +701,20 @@ where
                 else if diagram.len() == midpoint {
                     diagram.push(format!("{}{}{}",
                         SYM["J_LEFT"],
-                        sub_diagram[line],
+                        line,
                         SYM["J_RIGHT"]
                     ));
                 }
                 // ...if first node and top or last row and bottom...
-                else if (line < node.entry_height() && i == 0) || (line > node.entry_height() && i == choices - 1) {
-                    diagram.push(format!(" {}{}{} ", repeat(' ', left_pad), sub_diagram[line], repeat(' ', right_pad)));
+                else if (n < node.entry_height() && i == 0) || (n > node.entry_height() && i == choices - 1) {
+                    diagram.push(format!(" {}{}{} ", repeat(' ', left_pad), line, repeat(' ', right_pad)));
                 }
                 // ...otherwise add vertical line
                 else {
                     diagram.push(format!("{}{}{}{}{}",
                         SYM["L_VERT"],
                         repeat(' ', left_pad),
-                        sub_diagram[line],
+                        line,
                         repeat(' ', right_pad),
                         SYM["L_VERT"]
                     ));
@@ -733,12 +748,12 @@ impl RailroadRenderer {
         match tree {
             RegEx::Element(a) => {
                 for i in a.iter() {
-                    let new_elem = Self::generate_diagram_element(&*i, &mut diagram)?;
+                    let new_elem = Self::generate_diagram_element(i)?;
                     diagram.push(new_elem);
                 }
             },
             _ => {
-                let new_elem = Self::generate_diagram_element(tree, &mut diagram)?;
+                let new_elem = Self::generate_diagram_element(tree)?;
                 diagram.push(new_elem);
             }
         }
@@ -747,8 +762,7 @@ impl RailroadRenderer {
     }
 
     pub fn generate_diagram_element(
-        tree: &RegEx,
-        diagram: &mut Sequence<Box<dyn Draw>>,
+        tree: &RegEx
     ) -> Result<Box<dyn Draw>, Error> {
         match tree {
             RegEx::Terminal(a) => Ok(Box::new(Terminal {
@@ -756,20 +770,20 @@ impl RailroadRenderer {
             })),
             RegEx::Repetition(repetition, a) => match repetition {
                 RepetitionType::ZeroOrOne => Ok(Box::new(Optional::<Box<dyn Draw>> {
-                    inner: Self::generate_diagram_element(a, diagram)?,
+                    inner: Self::generate_diagram_element(a)?,
                 })),
                 _ => Ok(Box::new(Repetition::<Box<dyn Draw>> {
-                    inner: Self::generate_diagram_element(a, diagram)?,
+                    inner: Self::generate_diagram_element(a)?,
                     repetition: *repetition,
                 })),
             },
             RegEx::Alternation(a) => Ok(Box::new(Choice::<Box<dyn Draw>> {
-                inner: a.iter().map(|x| Self::generate_diagram_element(x, diagram).unwrap()).collect()
+                inner: a.iter().map(|x| Self::generate_diagram_element(x).unwrap()).collect()
             })),
             RegEx::Element(a) => {
                 let mut seq = Vec::new();
                 for i in a.iter() {
-                    let new_elem = Self::generate_diagram_element(i, diagram)?;
+                    let new_elem = Self::generate_diagram_element(i)?;
                     seq.push(new_elem);
                 }
                 Ok(Box::new(Sequence::<Box<dyn Draw>>::new(seq)))

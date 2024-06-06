@@ -193,7 +193,13 @@ impl EventHandler {
 
                     // Parse and render regular expression
                     let mut parser = RegExParser::new(&regex);
-                    let parsed_regex = parser.parse()?;
+                    let parsed_regex = match parser.parse() {
+                        Ok(parsed_regex) => parsed_regex,
+                        Err(e) => {
+                            error!("Error parsing regex: {}", e);
+                            panic!()
+                        }
+                    };
                     info!("Parsed regular expression: {:?}", parsed_regex);
                     let diagram = match RailroadRenderer::generate_diagram(&parsed_regex) {
                         Ok(diagram) => diagram,
@@ -416,6 +422,9 @@ fn main() {
 
     match event_handler.recv() {
         Ok(_) => (),
-        Err(e) => event_handler.send_error(e),
+        Err(e) => {
+            error!("Error: {}", e);
+            event_handler.send_error(e)
+        },
     }
 }
