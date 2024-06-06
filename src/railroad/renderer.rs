@@ -19,7 +19,7 @@ fn repeat(character: char, n: usize) -> String {
 
 
 /// A horizontal sequence of railroad diagram elements
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Sequence<N> {
     children: Vec<N>,
 }
@@ -39,14 +39,6 @@ impl<N> Sequence<N> {
     #[must_use]
     pub fn into_inner(self) -> Vec<N> {
         self.children
-    }
-}
-
-impl<N> Default for Sequence<N> {
-    fn default() -> Self {
-        Self {
-            children: Vec::new(),
-        }
     }
 }
 
@@ -146,19 +138,13 @@ where
 }
 
 /// The `Start` of a railroad diagram
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Start {}
 
 impl Start {
     #[must_use]
     pub fn new() -> Self {
         Start {}
-    }
-}
-
-impl Default for Start {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
@@ -181,19 +167,13 @@ impl Draw for Start {
 }
 
 /// The `End` of a railroad diagram
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct End {}
 
 impl End {
     #[must_use]
     pub fn new() -> Self {
         End {}
-    }
-}
-
-impl Default for End {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
@@ -552,14 +532,9 @@ where
     }
 }
 
+#[derive(Default)]
 pub struct RailroadRenderer {
     _diagram: Vec<String>,
-}
-
-impl Default for RailroadRenderer {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 impl RailroadRenderer {
