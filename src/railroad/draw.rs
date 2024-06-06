@@ -98,9 +98,6 @@ pub trait DrawGroup {
     /// The maximum `width()`-value.
     fn max_width(self) -> usize;
 
-    /// The sum of all `width()`-values.
-    fn total_width(self) -> usize;
-
     /// The sum of all `height()`-values.
     fn total_height(self) -> usize;
 }
@@ -129,10 +126,6 @@ where
             .map(|n| n.width())
             .max()
             .unwrap_or_default()
-    }
-
-    fn total_width(self) -> usize {
-        self.into_iter().map(|n| n.width()).sum()
     }
 
     fn total_height(self) -> usize {
