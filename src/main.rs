@@ -9,6 +9,7 @@ use crate::{error::Error, parser::RegExParser, railroad::RailroadRenderer, text:
 pub mod error;
 pub mod parser;
 pub mod railroad;
+pub mod sym;
 pub mod text;
 pub mod test;
 

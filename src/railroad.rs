@@ -1,50 +1,14 @@
-use lazy_static::lazy_static;
-use std::{collections::HashMap, usize};
+use std::usize;
 use std::iter;
 use tracing::info;
 
-use crate::parser::AnchorType;
 use crate::{
     error::Error,
-    parser::{RegEx, RepetitionType},
+    parser::{AnchorType, RegEx, RepetitionType},
+    sym,
 };
 
 const H_PADDING: usize = 2;
-
-lazy_static! {
-    static ref SYM: HashMap<&'static str, char> = [
-        ("START", '╟'),
-        ("END", '╢'),
-        ("CROSS", '┼'),
-        ("J_LEFT", '┤'),
-        ("J_RIGHT", '├'),
-        ("J_UP", '┴'),
-        ("J_DOWN", '┬'),
-        ("J_LEFT_B", '┨'),
-        ("J_RIGHT_B", '┠'),
-        ("J_UP_B", '┷'),
-        ("J_DOWN_B", '┯'),
-        ("L_HORZ", '─'),
-        ("L_VERT", '│'),
-        ("L_HORZ_B", '━'),
-        ("L_VERT_B", '┃'),
-        ("C_TL_SQR", '┌'),
-        ("C_TR_SQR", '┐'),
-        ("C_BL_SQR", '└'),
-        ("C_BR_SQR", '┘'),
-        ("C_TL_SQR_B", '┏'),
-        ("C_TR_SQR_B", '┓'),
-        ("C_BL_SQR_B", '┗'),
-        ("C_BR_SQR_B", '┛'),
-        ("C_TL_RND", '╭'),
-        ("C_TR_RND", '╮'),
-        ("C_BL_RND", '╰'),
-        ("C_BR_RND", '╯')
-    ]
-    .iter()
-    .copied()
-    .collect();
-}
 
 
 // Repeat character n times
@@ -294,7 +258,7 @@ where
             if n > 0 {
                 // Add padding
                 let empty = repeat(' ', H_PADDING);
-                let line = repeat(SYM["L_HORZ"], H_PADDING);
+                let line = repeat(sym::L_HORZ, H_PADDING);
                 for (i, d) in diagram.iter_mut().enumerate() {
                     if i == exit_height {
                         *d = format!("{}{}", d, line);
@@ -350,7 +314,7 @@ impl Draw for Start {
     }
 
     fn draw(&self) -> Vec<String> {
-        vec![SYM["START"].to_string()]
+        vec![sym::START.to_string()]
     }
 }
 
@@ -385,7 +349,7 @@ impl Draw for End {
     }
 
     fn draw(&self) -> Vec<String> {
-        vec![SYM["END"].to_string()]
+        vec![sym::END.to_string()]
     }
 }
 
@@ -420,21 +384,21 @@ impl Draw for Terminal {
         // Top row
         diagram.push(format!(
             "{}{}{}",
-            SYM["C_TL_SQR"],
-            repeat(SYM["L_HORZ"], self.width() - 2),
-            SYM["C_TR_SQR"]
+            sym::C_TL_SQR,
+            repeat(sym::L_HORZ, self.width() - 2),
+            sym::C_TR_SQR
         ));
         // Text row
         diagram.push(format!(
             "{} {} {}",
-            SYM["J_LEFT"], self.text, SYM["J_RIGHT"]
+            sym::J_LEFT, self.text, sym::J_RIGHT
         ));
         // Top row
         diagram.push(format!(
             "{}{}{}",
-            SYM["C_BL_SQR"],
-            repeat(SYM["L_HORZ"], self.width() - 2),
-            SYM["C_BR_SQR"]
+            sym::C_BL_SQR,
+            repeat(sym::L_HORZ, self.width() - 2),
+            sym::C_BR_SQR
         ));
 
         diagram
@@ -472,21 +436,21 @@ impl Draw for Anchor {
         // Top row
         diagram.push(format!(
             "{}{}{}",
-            SYM["C_TL_SQR_B"],
-            repeat(SYM["L_HORZ_B"], self.width() - 2),
-            SYM["C_TR_SQR_B"]
+            sym::C_TL_SQR_B,
+            repeat(sym::L_HORZ_B, self.width() - 2),
+            sym::C_TR_SQR_B
         ));
         // Text row
         diagram.push(format!(
             "{}{}{}",
-            SYM["J_LEFT_B"], self.text, SYM["J_RIGHT_B"]
+            sym::J_LEFT_B, self.text, sym::J_RIGHT_B
         ));
         // Top row
         diagram.push(format!(
             "{}{}{}",
-            SYM["C_BL_SQR_B"],
-            repeat(SYM["L_HORZ_B"], self.width() - 2),
-            SYM["C_BR_SQR_B"]
+            sym::C_BL_SQR_B,
+            repeat(sym::L_HORZ_B, self.width() - 2),
+            sym::C_BR_SQR_B
         ));
 
         diagram
@@ -533,11 +497,11 @@ where
             match self.entry_height() {
                 height if height == i => {
                     *d = format!("{}{}{}{}{}",
-                        SYM["J_DOWN"], SYM["L_HORZ"], *d, SYM["L_HORZ"], SYM["J_DOWN"]
+                        sym::J_DOWN, sym::L_HORZ, *d, sym::L_HORZ, sym::J_DOWN
                     );
                 },
                 height if height < i => {
-                    *d = format!("{} {} {}", SYM["L_VERT"], *d, SYM["L_VERT"]);
+                    *d = format!("{} {} {}", sym::L_VERT, *d, sym::L_VERT);
                 },
                 _ => *d = format!("  {}  ", *d)
             }
@@ -558,10 +522,10 @@ where
 
         // Bottom loop
         diagram.push(format!("{}{}{}{}",
-            SYM["C_BL_RND"],
+            sym::C_BL_RND,
             desciption,
-            repeat(SYM["L_HORZ"], padding),
-            SYM["C_BR_RND"]
+            repeat(sym::L_HORZ, padding),
+            sym::C_BR_RND
         ));
 
         for (i, n) in diagram.iter().enumerate() {
@@ -606,11 +570,11 @@ where
             match i {
                 _ if i == height / 2 => {
                     *d = format!("{}{}{}{}{}",
-                        SYM["J_UP"], SYM["L_HORZ"], *d, SYM["L_HORZ"], SYM["J_UP"]
+                        sym::J_UP, sym::L_HORZ, *d, sym::L_HORZ, sym::J_UP
                     );   
                 },
                 _ if i < height / 2 => {
-                    *d = format!("{} {} {}", SYM["L_VERT"], *d, SYM["L_VERT"]);
+                    *d = format!("{} {} {}", sym::L_VERT, *d, sym::L_VERT);
                 },
                 _ => *d = format!("  {}  ", *d)
             }
@@ -619,9 +583,9 @@ where
         // Top loop
         let len_full = diagram[0].chars().count() - 2;
         diagram.insert(0, format!("{}{}{}",
-            SYM["C_TL_RND"],
-            repeat(SYM["L_HORZ"], len_full),
-            SYM["C_TR_RND"]
+            sym::C_TL_RND,
+            repeat(sym::L_HORZ, len_full),
+            sym::C_TR_RND
         ));
 
         diagram
@@ -682,27 +646,27 @@ where
                 if n == node.entry_height() {
                     info!("Midpoint {}", line);
                     let (left_sym, right_sym) = if i == 0 {
-                        (SYM["C_TL_RND"], SYM["C_TR_RND"])
+                        (sym::C_TL_RND, sym::C_TR_RND)
                     } else if diagram.len() == midpoint {
-                        (SYM["CROSS"], SYM["CROSS"])
+                        (sym::CROSS, sym::CROSS)
                     } else if i == choices - 1 {
-                        (SYM["C_BL_RND"], SYM["C_BR_RND"])
+                        (sym::C_BL_RND, sym::C_BR_RND)
                     } else {
-                        (SYM["J_RIGHT"], SYM["J_LEFT"])
+                        (sym::J_RIGHT, sym::J_LEFT)
                     };
                     diagram.push(format!("{}{}{}{}{}",
                         left_sym,
-                        repeat(SYM["L_HORZ"], left_pad),
+                        repeat(sym::L_HORZ, left_pad),
                         line,
-                        repeat(SYM["L_HORZ"], right_pad),
+                        repeat(sym::L_HORZ, right_pad),
                         right_sym
                     ));
                 }
                 else if diagram.len() == midpoint {
                     diagram.push(format!("{}{}{}",
-                        SYM["J_LEFT"],
+                        sym::J_LEFT,
                         line,
-                        SYM["J_RIGHT"]
+                        sym::J_RIGHT
                     ));
                 }
                 // ...if first node and top or last row and bottom...
@@ -712,11 +676,11 @@ where
                 // ...otherwise add vertical line
                 else {
                     diagram.push(format!("{}{}{}{}{}",
-                        SYM["L_VERT"],
+                        sym::L_VERT,
                         repeat(' ', left_pad),
                         line,
                         repeat(' ', right_pad),
-                        SYM["L_VERT"]
+                        sym::L_VERT
                     ));
                 }
             }
