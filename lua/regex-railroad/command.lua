@@ -137,9 +137,23 @@ function M.run_diagram_command()
     else
         line = ""
     end
+
+    -- Use filename to extract current language
     local filename = vim.api.nvim_buf_get_name(0)
+
+    -- Set highlight group from config
+    vim.api.nvim_set_hl(
+        0,
+        "RegexHighlight",
+        config.opts.highlight
+    )
+
+    local current_win = vim.api.nvim_get_current_win()
+
     jobid = job.attach(filename)
     regex_railroad(filename, line)
+
+    win_open_autocmd(current_win)
 end
 
 

@@ -1,6 +1,6 @@
 use std::convert::From;
 
-use crate::Language;
+use crate::extract::Language;
 
 #[derive(Clone, Debug)]
 pub enum Error {

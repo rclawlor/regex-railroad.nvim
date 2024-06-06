@@ -1,153 +1,27 @@
-use lazy_static::lazy_static;
 use neovim_lib::{Neovim, NeovimApi, Session, Value};
-use std::{collections::HashMap, fmt::Display, fs::File, sync::Arc};
+use std::{fs::File, sync::Arc};
 use tracing::{error, info, warn};
 use tracing_subscriber::{self, layer::SubscriberExt};
 
-use crate::{error::Error, parser::RegExParser, renderer::RegExRenderer};
+use crate::{
+    error::Error,
+    extract::RegexExtractor,
+    parser::RegExParser,
+    railroad::renderer::RailroadRenderer,
+    text::TextRenderer
+};
 
 pub mod error;
+pub mod extract;
 pub mod parser;
-pub mod renderer;
+pub mod railroad;
+pub mod text;
+pub mod test;
 
-const _TEST_LITERAL: &str = r"This is a literal string";
-const _TEST_NORMAL: &str = "(a|b)+hello(cd){5,}";
-const _TEST_CHARACTER: &str = "[^aoeu_0-a]";
-const _TEST_OPTIONS: &str = "(ab|bc|cd)";
-
-#[derive(Debug)]
-struct StringFormat {
-    string_character: Vec<String>,
-    _escape_character: String,
-    literal_string_start: Option<Vec<String>>,
-    literal_string_end: Option<Vec<String>>,
-}
-
-#[derive(Clone, Eq, Hash, PartialEq, Debug)]
-pub enum Language {
-    Python,
-    Rust,
-    Unknown(String),
-    None,
-}
-
-impl Display for Language {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
-
-impl Language {
-    fn from_filename(filename: &str) -> Language {
-        match filename.split('.').last() {
-            Some(extension) => {
-                info!("Found file extension '.{}'", extension);
-                match extension {
-                    "py" => Language::Python,
-                    "rs" => Language::Rust,
-                    _ => Language::Unknown(extension.to_string()),
-                }
-            }
-            None => Language::None,
-        }
-    }
-}
-
-lazy_static! {
-    /// Mapping of file extension to the language's string format
-    static ref STRING_FORMAT: HashMap<Language, StringFormat> = HashMap::from([
-        (Language::Python, StringFormat {
-                string_character: ["\""].iter().map(|x| x.to_string()).collect(),
-                _escape_character: "\\".to_string(),
-                literal_string_start: Some(["r\""].iter().map(|x| x.to_string()).collect()),
-                literal_string_end: Some(["\""].iter().map(|x| x.to_string()).collect()),
-        }),
-        (Language::Rust, StringFormat {
-                string_character: ["\""].iter().map(|x| x.to_string()).collect(),
-                _escape_character: "\\".to_string(),
-                literal_string_start: Some(["r\""].iter().map(|x| x.to_string()).collect()),
-                literal_string_end: Some(["\""].iter().map(|x| x.to_string()).collect()),
-        })
-    ]);
-}
-
-struct RegexRailroad {}
-
-impl RegexRailroad {
-    /// Create new instance of RegexRailroad
-    fn new() -> RegexRailroad {
-        RegexRailroad {}
-    }
-
-    /// Find string characters used for file type
-    fn get_string_format(&self, language: &Language) -> Result<&StringFormat, Error> {
-        match STRING_FORMAT.get(language) {
-            Some(string_format) => {
-                info!("Found escape character '{:?}'", string_format);
-                Ok(string_format)
-            }
-            None => Err(Error::UnsupportedLanguage(language.clone())),
-        }
-    }
-
-    /// Checks if start/end of text is consistent with the language's string specification
-    /// and strips the start/end characters
-    fn strip_string_start_end(&self, text: &str, start: &[String], end: &[String]) -> String {
-        // Ensure text is long enough to contain start and end characters
-        let text_len = text.len();
-
-        let mut max_start_len = 0;
-        let mut max_end_len = 0;
-
-        for s in start.iter() {
-            if text_len > s.len() {
-                info!("Start: {} - {:?}", &text[0..s.len()], s);
-                if s.contains(&text[0..s.len()].to_string()) {
-                    max_start_len = std::cmp::max(max_start_len, s.len());
-                }
-            }
-        }
-        for e in end.iter() {
-            if text_len > e.len() {
-                info!("End: {} - {:?}", &text[text_len - end.len()..], end);
-                if end.contains(&text[text_len - e.len()..].to_string()) {
-                    max_end_len = std::cmp::max(max_end_len, e.len());
-                }
-            }
-        }
-        text[max_start_len..text_len - max_end_len].to_string()
-    }
-
-    /// Check if text is a regular expression based on language
-    fn get_regex<'a>(&'a self, filename: &str, text: &'a str) -> Result<String, Error> {
-        let language = Language::from_filename(filename);
-        let string_format = self.get_string_format(&language)?;
-
-        // Iterate through line and check for literal string
-        if string_format.literal_string_start.is_some()
-            && string_format.literal_string_end.is_some()
-        {
-            let str_start = string_format
-                .literal_string_start
-                .as_ref()
-                .expect("Literal string start already checked with '.is_some()'");
-            let str_end = string_format
-                .literal_string_end
-                .as_ref()
-                .expect("Literal string end already checked with '.is_some()'");
-            // Ensure text is long enough to be a valid regex
-            Ok(self.strip_string_start_end(text, str_start, str_end))
-        } else {
-            // Not a literal string, lets check for a normal string
-            let str_character = string_format.string_character.as_ref();
-            Ok(self.strip_string_start_end(text, str_character, str_character))
-        }
-    }
-}
 
 struct EventHandler {
     nvim: Neovim,
-    regex_railroad: RegexRailroad,
+    regex_railroad: RegexExtractor,
 }
 
 impl EventHandler {
@@ -162,12 +36,22 @@ impl EventHandler {
         };
 
         let nvim = Neovim::new(session);
-        let regex_railroad = RegexRailroad::new();
+        let regex_railroad = RegexExtractor::new();
 
         EventHandler {
             nvim,
             regex_railroad,
         }
+    }
+
+    /// Retrieve filename and node text from RPC arguments
+    fn parse_rpc_args(&self, value: Vec<Value>) -> Result<(String, String), Error> {
+        let msg = &value[0];
+        let filename = msg[0].as_str().expect("Filename is the first argument of the Lua RPC");
+        let node = msg[1].as_str().expect("Node is the second argument of the Lua RPC");
+        info!("Received message: {}", node);
+
+        Ok((filename.to_string(), node.to_string()))
     }
 
     fn recv(&mut self) -> Result<(), Error> {
@@ -177,21 +61,21 @@ impl EventHandler {
             match Message::from(event) {
                 Message::RegexRailroad => {
                     // Handle RPC arguments
-                    // TODO: handle errors if arguments incorrect
-                    let msg = &value[0];
-                    let filename = msg[0].as_str().unwrap();
-                    let text = msg[1].as_str().unwrap();
-                    info!("Received message: {}", text);
+                    let (filename, node) = self.parse_rpc_args(value)?;
 
                     // Obtain regular expression from received text
-                    let regex = self.regex_railroad.get_regex(filename, text)?;
+                    let regex = self.regex_railroad.get_regex(&filename, &node)?;
                     self.send_msg(&regex);
 
                     // Parse and render regular expression
                     let mut parser = RegExParser::new(&regex);
                     let parsed_regex = parser.parse()?;
                     info!("Parsed regular expression: {:?}", parsed_regex);
-                    let diagram = RegExRenderer::render_diagram(&parsed_regex)?;
+
+                    // Generate and render diagram
+                    let diagram = RailroadRenderer::generate_diagram(&parsed_regex)?;
+                    info!("Successfully generated diagram: {:?}", diagram);
+                    let text = RailroadRenderer::render_diagram(&diagram)?;
                     info!("Successfully rendered diagram");
 
                     // Create neovim buffer and window
@@ -209,7 +93,7 @@ impl EventHandler {
                         // Increase height and width by 2 for whitespace padding
                         (
                             Value::from("width"),
-                            Value::from(diagram.iter().max_by_key(|x| x.len()).unwrap().len() + 2),
+                            Value::from(text[0].chars().count() + 2),
                         ),
                         (Value::from("height"), Value::from(text.len() + 2)),
                         // TODO: allow styles to be set by the user
@@ -240,7 +124,7 @@ impl EventHandler {
                             Value::from(1),
                             Value::from(-1),
                             Value::from(true),
-                            diagram.iter().map(|x| format!(" {:?} ", x)).collect(),
+                            text.iter().map(|x| format!(" {} ", x)).collect(),
                         ],
                     ) {
                         Ok(_) => (),
@@ -249,21 +133,17 @@ impl EventHandler {
                 }
                 Message::RegexText => {
                     // Handle RPC arguments
-                    // TODO: handle errors if arguments incorrect
-                    let msg = &value[0];
-                    let filename = msg[0].as_str().unwrap();
-                    let text = msg[1].as_str().unwrap();
-                    info!("Received message: {}", text);
+                    let (filename, node) = self.parse_rpc_args(value)?;
 
                     // Obtain regular expression from received text
-                    let regex = self.regex_railroad.get_regex(filename, text)?;
+                    let regex = self.regex_railroad.get_regex(&filename, &node)?;
                     self.send_msg(&regex);
 
                     // Parse and render regular expression
                     let mut parser = RegExParser::new(&regex);
                     let parsed_regex = parser.parse()?;
                     info!("Parsed regular expression: {:?}", parsed_regex);
-                    let (text, highlight) = RegExRenderer::render_text(&parsed_regex)?;
+                    let (text, highlight) = TextRenderer::render_text(&parsed_regex)?;
                     info!("Successfully rendered text");
 
                     // Create neovim buffer and window
@@ -402,6 +282,9 @@ fn main() {
 
     match event_handler.recv() {
         Ok(_) => (),
-        Err(e) => event_handler.send_error(e),
+        Err(e) => {
+            error!("Error: {}", e);
+            event_handler.send_error(e)
+        },
     }
 }

@@ -1,70 +1,24 @@
-use lazy_static::lazy_static;
-use std::collections::HashMap;
 use std::ops::Deref;
 use tracing::{error, info};
 
 use crate::{
     error::Error,
-    parser::{CharacterType, RegEx, RepetitionType},
+    parser::{AnchorType, CharacterType, RegEx, RepetitionType},
 };
 
 type HighlightRegion = (usize, usize, usize);
 
-lazy_static! {
-    static ref DRAWING_CHARS: HashMap<&'static str, char> = [
-        ("START", '╟'),
-        ("END", '╢'),
-        ("LINE_HORZ", '─'),
-        ("LINE_VERT", '│'),
-        ("CORNER_TL_SQR", '┌'),
-        ("CORNER_TR_SQR", '┐'),
-        ("CORNER_BL_SQR", '└'),
-        ("CORNER_BR_SQR", '┘'),
-        ("CORNER_TL_RND", '╭'),
-        ("CORNER_TR_RND", '╮'),
-        ("CORNER_BL_RND", '╰'),
-        ("CORNER_BR_RND", '╯')
-    ]
-    .iter()
-    .copied()
-    .collect();
-}
+pub struct TextRenderer {}
 
-pub struct RegExRenderer {
-    _diagram: Vec<String>,
-}
-
-impl Default for RegExRenderer {
+impl Default for TextRenderer {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl RegExRenderer {
-    pub fn new() -> RegExRenderer {
-        RegExRenderer {
-            _diagram: vec![String::new()],
-        }
-    }
-
-    pub fn render_diagram(tree: &RegEx) -> Result<Vec<Vec<String>>, Error> {
-        let mut msg = Vec::new();
-        match tree {
-            RegEx::Element(a) => {
-                for _i in a.iter() {
-                    msg.push(RegExRenderer::render_diagram_element()?);
-                }
-            }
-            other => {
-                error!("Expected RegEx::Element, received {:?}", other);
-                panic!("Expected RegEx::Element, received {:?}", other);
-            }
-        }
-        Ok(msg)
-    }
-
-    fn render_diagram_element() -> Result<Vec<String>, Error> {
-        Ok(vec![])
+impl TextRenderer {
+    pub fn new() -> TextRenderer {
+        TextRenderer {}
     }
 
     pub fn render_text(tree: &RegEx) -> Result<(Vec<String>, Vec<HighlightRegion>), Error> {
@@ -121,6 +75,13 @@ impl RegExRenderer {
     ) -> Result<String, Error> {
         info!("Rendering text element...");
         match tree {
+            RegEx::Anchor(a) => {
+                match a {
+                    AnchorType::Start => Ok(String::from("Start")),
+                    AnchorType::End => Ok(String::from("End")),
+                    _ => panic!()
+                }
+            },
             RegEx::Element(a) => {
                 let mut msg = "".to_string();
                 for i in a.iter() {
