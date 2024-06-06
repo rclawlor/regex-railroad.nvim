@@ -19,6 +19,11 @@ fn repeat(character: char, n: usize) -> String {
 
 
 /// A horizontal sequence of railroad diagram elements
+///
+///   ┌───┐  ┌───┐  ┌───┐
+///   │ A ├──┤ B ├──┤ C │
+///   └───┘  └───┘  └───┘
+///
 #[derive(Debug, Default)]
 pub struct Sequence<N> {
     children: Vec<N>,
@@ -138,6 +143,9 @@ where
 }
 
 /// The `Start` of a railroad diagram
+///
+///   START╟───
+///
 #[derive(Debug, Default)]
 pub struct Start {}
 
@@ -158,15 +166,18 @@ impl Draw for Start {
     }
 
     fn width(&self) -> usize {
-        1
+        6
     }
 
     fn draw(&self) -> Vec<String> {
-        vec![sym::START.to_string()]
+        vec![format!("START{}", sym::START.to_string())]
     }
 }
 
 /// The `End` of a railroad diagram
+///
+///   ───╢END
+///
 #[derive(Debug, Default)]
 pub struct End {}
 
@@ -191,11 +202,16 @@ impl Draw for End {
     }
 
     fn draw(&self) -> Vec<String> {
-        vec![sym::END.to_string()]
+        vec![format!("{}END", sym::END.to_string())]
     }
 }
 
 /// A `Terminal` node
+///
+///   ┌──────────┐
+///   ┤ Terminal ├
+///   └──────────┘
+///
 #[derive(Debug)]
 pub struct Terminal {
     text: String,
@@ -248,6 +264,11 @@ impl Draw for Terminal {
 }
 
 /// An `Anchor` node
+///
+///   ┏━━━━━━━━┓
+///   ┨ Anchor ┠
+///   ┗━━━━━━━━┛
+///
 #[derive(Debug)]
 pub struct Anchor {
     text: String,
@@ -300,6 +321,12 @@ impl Draw for Anchor {
 }
 
 /// A `Repetition` of a node
+///
+///     ┌────────────┐
+///   ┬─┤ Repetition ├─┬
+///   │ └────────────┘ │
+///   ╰─N──────────────╯
+///
 pub struct Repetition<N> {
     inner: N,
     repetition: RepetitionType,
@@ -379,6 +406,12 @@ where
 }
 
 /// An `Optional` node
+///
+///   ╭──────────────╮
+///   │ ┌──────────┐ │
+///   ┴─┤ Optional ├─┴
+///     └──────────┘
+///
 pub struct Optional<N> {
     inner: N,
 }
@@ -435,6 +468,15 @@ where
 }
 
 /// A `Choice` of nodes
+///
+///     ┌───┐
+///   ╭─┤ A ├─╮
+///   │ └───┘ │
+///   ┤       ├
+///   │ ┌───┐ │
+///   ╰─┤ B ├─╯
+///     └───┘
+///
 pub struct Choice<N> {
     inner: Vec<N>
 }
