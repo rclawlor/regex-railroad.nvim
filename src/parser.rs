@@ -3,7 +3,7 @@ use lazy_static::lazy_static;
 use tracing::info;
 
 lazy_static! {
-    static ref SPECIAL_CHARS: Vec<char> = vec!['(', ')', '+', '*', '$', '|', '^', '{', '}'];
+    static ref SPECIAL_CHARS: Vec<char> = vec!['(', ')', '[', ']', '+', '*', '$', '|', '^', '{', '}'];
 }
 
 #[derive(Eq, PartialEq, Debug)]
