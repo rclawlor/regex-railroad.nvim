@@ -4,9 +4,7 @@
 ![lua workflow](https://github.com/rclawlor/regex-railroad.nvim/actions/workflows/lua.yml/badge.svg)
 
 
-`regex-railroad.nvim` generates useful text and diagrams<sup>1</sup> to help explain regular expressions in your code.
-
-<sup>1 It doesn't actually do this yet, but it will!</sup>
+`regex-railroad.nvim` generates useful text and diagrams to help explain regular expressions in your code.
 
 ## Getting started
 ### Required dependencies
@@ -25,6 +23,9 @@ return {
 
 ## Usage
 Use `:RegexText` to generate a text description of the regular expression under your cursor, or `:RegexRailroad` to instead generate a railroad diagram!
+
+![regex-railroad](https://github.com/rclawlor/regex-railroad.nvim/assets/73249568/252a4bb9-4fd8-44e5-ab26-ba694e6049b1)
+
 To remap the functions to something more convenient, use the following:
 ```lua
 vim.api.nvim_set_keymap("n", "<C-x>", "<cmd>RegexText<CR>", {noremap = true, silent = true})
