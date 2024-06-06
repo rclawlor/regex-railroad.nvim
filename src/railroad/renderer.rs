@@ -2,6 +2,7 @@ use std::usize;
 use std::iter;
 use tracing::info;
 
+use crate::parser::CharacterType;
 use crate::{
     error::Error,
     parser::{AnchorType, RegEx, RepetitionType},
@@ -435,20 +436,19 @@ where
     }
 
     fn width(&self) -> usize {
-        self.inner.width() + 2
+        self.inner.width() + 4
     }
 
     fn draw(&self) -> Vec<String> {
         let mut diagram = self.inner.draw();
-        let height = diagram.len();
         for (i, d) in diagram.iter_mut().enumerate() {
-            match i {
-                _ if i == height / 2 => {
+            match self.entry_height() {
+                height if height - 1 == i => {
                     *d = format!("{}{}{}{}{}",
                         sym::J_UP, sym::L_HORZ, *d, sym::L_HORZ, sym::J_UP
-                    );   
+                    );
                 },
-                _ if i < height / 2 => {
+                height if i < height => {
                     *d = format!("{} {} {}", sym::L_VERT, *d, sym::L_VERT);
                 },
                 _ => *d = format!("  {}  ", *d)
@@ -574,6 +574,92 @@ where
     }
 }
 
+/// A `Stack` of options
+///
+///    ┌───┐
+///    │'A'│
+///    ┤'B'├
+///    │'C'│
+///    └───┘
+///
+pub struct Stack {
+    invert: bool,
+    characters: Vec<String>
+}
+
+impl Stack {
+    pub fn new(invert: bool, characters: Vec<String>) -> Self {
+        Stack { invert, characters }
+    }
+}
+
+impl Draw for Stack {
+    fn entry_height(&self) -> usize {
+        (self.characters.len() + 3) / 2
+    }
+
+    fn height(&self) -> usize {
+        self.characters.len() + 3
+    }
+
+    fn width(&self) -> usize {
+        std::cmp::max(
+            self.characters.iter()
+                .map(|x| x.chars().count())
+                .max()
+                .unwrap_or(0) + 2,
+            9
+        )
+    }
+    
+    fn draw(&self) -> Vec<String> {
+        let mut diagram = Vec::new();
+        let width = self.width();
+        let entry_height = self.entry_height();
+        // Description
+        if self.invert {
+            diagram.push(format!("None of:{}", repeat(' ', width - 8)));
+        } else {
+            diagram.push(format!("One of:{}", repeat(' ', width - 7)));
+        }
+        // Top row
+        diagram.push(format!(
+            "{}{}{}",
+            sym::C_TL_SQR,
+            repeat(sym::L_HORZ, width - 2),
+            sym::C_TR_SQR
+        ));
+        // Characters
+        for character in self.characters.iter() {
+            let sub_len = character.chars().count();
+            let left_pad = (width - 2 - sub_len) / 2;
+            let right_pad = usize::div_ceil(width - 2 - sub_len, 2);
+            let (left_char, right_char) = match diagram.len() {
+                a if a == entry_height => (sym::J_LEFT, sym::J_RIGHT),
+                _ => (sym::L_VERT, sym::L_VERT)
+            };
+            diagram.push(format!(
+                "{}{}{}{}{}",
+                left_char,
+                repeat(' ', left_pad),
+                character, 
+                repeat(' ', right_pad),
+                right_char
+            ));
+        }
+        // Bottom row
+        diagram.push(format!(
+            "{}{}{}",
+            sym::C_BL_SQR,
+            repeat(sym::L_HORZ, self.width() - 2),
+            sym::C_BR_SQR
+        ));
+
+        diagram
+
+    }
+}
+
 #[derive(Default)]
 pub struct RailroadRenderer {
     _diagram: Vec<String>,
@@ -644,10 +730,34 @@ impl RailroadRenderer {
                     }
                 }
             },
-            other => {
-                info!("Other {:?}", other);
-                Ok(Box::new(Terminal { text: String::new() }))
-            },
+            RegEx::Character(a) => {
+                let mut invert = false;
+                let b = match a {
+                    CharacterType::Any(b) => b,
+                    CharacterType::Not(b) => {
+                        invert = true;
+                        b
+                    },
+                    _ => return Err(Error::InvalidParsing)
+                };
+                let mut characters: Vec<String> = Vec::new();
+                for character in b.iter() {
+                    characters.push(Self::render_character(character)?);
+                }
+                Ok(Box::new(Stack { invert, characters }))
+            }
+        }
+    }
+
+    fn render_character(character: &CharacterType) -> Result<String, Error> {
+        match character {
+            CharacterType::Between(a, b) => Ok(format!(
+                "[{}-{}]",
+                Self::render_character(a)?,
+                Self::render_character(b)?
+            )),
+            CharacterType::Terminal(a) => Ok(format!("{}", a)),
+            _ => Err(Error::InvalidParsing),
         }
     }
 
