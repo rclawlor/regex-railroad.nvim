@@ -46,10 +46,9 @@ impl EventHandler {
 
     /// Retrieve filename and node text from RPC arguments
     fn parse_rpc_args(&self, value: Vec<Value>) -> Result<(String, String), Error> {
-        // TODO: handle errors if arguments incorrect
         let msg = &value[0];
-        let filename = msg[0].as_str().unwrap();
-        let node = msg[1].as_str().unwrap();
+        let filename = msg[0].as_str().expect("Filename is the first argument of the Lua RPC");
+        let node = msg[1].as_str().expect("Node is the second argument of the Lua RPC");
         info!("Received message: {}", node);
 
         Ok((filename.to_string(), node.to_string()))
@@ -70,29 +69,13 @@ impl EventHandler {
 
                     // Parse and render regular expression
                     let mut parser = RegExParser::new(&regex);
-                    let parsed_regex = match parser.parse() {
-                        Ok(parsed_regex) => parsed_regex,
-                        Err(e) => {
-                            error!("Error parsing regex: {}", e);
-                            panic!()
-                        }
-                    };
+                    let parsed_regex = parser.parse()?;
                     info!("Parsed regular expression: {:?}", parsed_regex);
-                    let diagram = match RailroadRenderer::generate_diagram(&parsed_regex) {
-                        Ok(diagram) => diagram,
-                        Err(e) => {
-                            error!("{}", e);
-                            panic!()
-                        }
-                    };
+
+                    // Generate and render diagram
+                    let diagram = RailroadRenderer::generate_diagram(&parsed_regex)?;
                     info!("Successfully generated diagram: {:?}", diagram);
-                    let text = match RailroadRenderer::render_diagram(&diagram) {
-                        Ok(text) => text,
-                        Err(e) => {
-                            error!("{}", e);
-                            panic!()
-                        }
-                    };
+                    let text = RailroadRenderer::render_diagram(&diagram)?;
                     info!("Successfully rendered diagram");
 
                     // Create neovim buffer and window
