@@ -360,7 +360,6 @@ where
 
     fn draw(&self) -> Vec<String> {
         let mut diagram = self.inner.draw();
-        info!("Entry height: {}", self.entry_height());
         // Iterate through inner node
         for (i, d) in diagram.iter_mut().enumerate() {
             match self.entry_height() {
@@ -659,6 +658,84 @@ impl Draw for Stack {
     }
 }
 
+/// A 'Capture' group
+///
+///       <Name>
+///  ╭╌╌╌╌╌╌╌╌╌╌╌╌╌╌╮
+///  ┆ ┌──────────┐ ┆
+///  ┼─┤   Node   ├─┼
+///  ┆ └──────────┘ ┆
+///  ╰╌╌╌╌╌╌╌╌╌╌╌╌╌╌╯
+///
+#[derive(Debug)]
+pub struct Capture<N> {
+    inner: N,
+    name: Option<String>
+}
+
+impl<N> Capture<N> {
+    pub fn new(inner: N, name: Option<String>) -> Self {
+        Self { inner, name }
+    }
+}
+
+impl<N> Draw for Capture<N>
+where
+    N: Draw,
+{
+    fn entry_height(&self) -> usize {
+        if self.name.is_some() {
+            self.inner.entry_height() + 2
+        } else {
+            self.inner.entry_height() + 1
+        }
+    }
+
+    fn height(&self) -> usize {
+        if self.name.is_some() {
+            self.inner.height() + 3
+        } else {
+            self.inner.height() + 2
+        }
+    }
+
+    fn width(&self) -> usize {
+        self.inner.width() + 4
+    }
+
+    fn draw(&self) -> Vec<String> {
+        let mut diagram = self.inner.draw();
+        // Iterate through inner node
+        for (i, d) in diagram.iter_mut().enumerate() {
+            match self.entry_height() {
+                height if height == i + 1 => {
+                    *d = format!("{}{}{}{}{}",
+                        sym::CROSS, sym::L_HORZ, *d, sym::L_HORZ, sym::CROSS
+                    );
+                },
+                _ => {
+                    *d = format!("{} {} {}", sym::L_VERT_D, *d, sym::L_VERT_D);
+                }
+            }
+        }
+        let len_full = diagram[0].chars().count() - 2;
+        diagram.insert(0, format!("{}{}{}",
+            sym::C_TL_RND,
+            repeat(sym::L_HORZ_D, len_full),
+            sym::C_TR_RND
+        ));
+
+        diagram.push(format!("{}{}{}",
+            sym::C_BL_RND,
+            repeat(sym::L_HORZ_D, len_full),
+            sym::C_BR_RND
+        ));
+
+        diagram
+    }
+}
+
+
 #[derive(Default)]
 pub struct RailroadRenderer {
     _diagram: Vec<String>,
@@ -745,7 +822,11 @@ impl RailroadRenderer {
                 }
                 Ok(Box::new(Stack { invert, characters }))
             },
-            RegEx::Capture(name, a) => panic!()
+            RegEx::Capture(name, a) => Ok(
+                Box::new(
+                    Capture { inner: Self::generate_diagram_element(a)?, name: name.clone() }
+                )
+            )
         }
     }
 
