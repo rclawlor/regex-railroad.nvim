@@ -12,15 +12,19 @@ local jobid
 ---
 --- @param filename string name of current file
 --- @param text string text containing regular expression
+---
+--- @return table
 local function regex_railroad(filename, text)
-    vim.api.nvim_call_function(
-        "rpcnotify",
+    local response = vim.api.nvim_call_function(
+        "rpcrequest",
         {
             jobid,
             "regexrailroad",
             { filename, text }
         }
     )
+
+    return response
 end
 
 
@@ -29,14 +33,16 @@ end
 --- @param filename string name of current file
 --- @param text string text containing regular expression
 local function regex_text(filename, text)
-    vim.api.nvim_call_function(
-        "rpcnotify",
+    local response = vim.api.nvim_call_function(
+        "rpcrequest",
         {
             jobid,
             "regextext",
             { filename, text }
         }
     )
+
+    return response
 end
 
 
@@ -127,6 +133,25 @@ local function win_open_autocmd(win_id)
 end
 
 
+--- Creates a buffer containing text and opens a new window
+---
+---@param text table lines of text to be displayed
+---@param width integer width of buffer
+---@param height integer number of lines in buffer
+function create_win(text, width, height)
+    local buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_buf_set_lines(buf, 1, -1, true, text)
+    local win_opts = {
+        width = width + 2,
+        height = height + 2,
+        style = "minimal",
+        relative = "cursor",
+        row = 1,
+        col = 0
+    }
+    vim.api.nvim_open_win(buf, true, win_opts)
+end
+
 --- Runs when :RegexRailroad command executed
 function M.run_diagram_command()
     -- Use treesitter to extract regex text
@@ -151,9 +176,8 @@ function M.run_diagram_command()
     local current_win = vim.api.nvim_get_current_win()
 
     jobid = job.attach(filename)
-    regex_railroad(filename, line)
-
-    win_open_autocmd(current_win)
+    local ret = regex_railroad(filename, line)
+    create_win(ret.text, ret.width, ret.height)
 end
 
 
