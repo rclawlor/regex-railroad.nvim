@@ -12,7 +12,6 @@ local jobid
 ---
 --- @param filename string name of current file
 --- @param text string text containing regular expression
----
 --- @return table
 local function regex_railroad(filename, text)
     local response = vim.api.nvim_call_function(
@@ -32,6 +31,7 @@ end
 ---
 --- @param filename string name of current file
 --- @param text string text containing regular expression
+--- @return table 
 local function regex_text(filename, text)
     local response = vim.api.nvim_call_function(
         "rpcrequest",
@@ -65,6 +65,7 @@ local function close_preview_window(win_id, buf_ids)
     )
 end
 
+
 --- Creates autocommand to close floating window based on events
 ---
 --- @param events table list of events
@@ -93,6 +94,7 @@ local function close_win_autocmd(events, win_id, buf_ids)
     end
 end
 
+
 --- Configures floating window and sets up autocommand
 ---
 --- @param win_id integer ID of floating window
@@ -116,29 +118,12 @@ local function configure_floating_window(win_id, buf_id)
 end
 
 
---- Sets up autocommand to wait for floating window open
----
---- @param win_id integer ID of current window
-local function win_open_autocmd(win_id)
-    vim.api.nvim_create_autocmd("WinNew", {
-        once = true,
-        callback = function()
-            local fwin = vim.api.nvim_get_current_win()
-            local fbuf = vim.api.nvim_get_current_buf()
-
-            vim.api.nvim_set_current_win(win_id)
-            configure_floating_window(fwin, fbuf)
-        end,
-    })
-end
-
-
 --- Creates a buffer containing text and opens a new window
 ---
 ---@param text table lines of text to be displayed
 ---@param width integer width of buffer
 ---@param height integer number of lines in buffer
-function create_win(text, width, height)
+local function create_win(text, width, height)
     local buf = vim.api.nvim_create_buf(false, true)
     vim.api.nvim_buf_set_lines(buf, 1, -1, true, text)
     local win_opts = {
@@ -149,8 +134,10 @@ function create_win(text, width, height)
         row = 1,
         col = 0
     }
-    vim.api.nvim_open_win(buf, true, win_opts)
+    local win = vim.api.nvim_open_win(buf, false, win_opts)
+    configure_floating_window(win, buf)
 end
+
 
 --- Runs when :RegexRailroad command executed
 function M.run_diagram_command()
@@ -173,11 +160,15 @@ function M.run_diagram_command()
         config.opts.highlight
     )
 
-    local current_win = vim.api.nvim_get_current_win()
-
     jobid = job.attach(filename)
     local ret = regex_railroad(filename, line)
-    create_win(ret.text, ret.width, ret.height)
+    if ret.error == nil then
+        create_win(ret.text, ret.width, ret.height)
+    else
+        vim.api.nvim_command(
+            string.format("echohl ErrorMsg | echo \"%s\" | echohl None", ret.error)
+        )
+    end
 end
 
 
@@ -202,12 +193,17 @@ function M.run_text_command()
         config.opts.highlight
     )
 
-    local current_win = vim.api.nvim_get_current_win()
-
     jobid = job.attach(filename)
-    regex_text(filename, line)
+    local ret = regex_text(filename, line)
 
-    win_open_autocmd(current_win)
+    if ret.error == nil then
+        create_win(ret.text, ret.width, ret.height)
+    else
+        vim.api.nvim_command(
+            string.format("echohl ErrorMsg | echo \"%s\" | echohl None", ret.error)
+        )
+    end
+
 end
 
 

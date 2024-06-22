@@ -1,6 +1,6 @@
 use rmpv::Value;
 use rsnvim::{api::Nvim, handler::RequestHandler};
-use std::{fs::File, sync::Arc};
+use std::{fs::File, sync::Arc, thread::sleep};
 use tracing::{info, warn};
 use tracing_subscriber::{self, layer::SubscriberExt};
 
@@ -40,6 +40,7 @@ impl ReqHandler {
         Ok((filename.to_string(), node.to_string()))
     }
 
+    /// Generate railroad diagram from regular expression
     fn regexrailroad(&self, params: Vec<Value>) -> Result<Value, Error> {
         // Handle RPC arguments
         let (filename, node) = self.parse_rpc_args(params)?;
@@ -68,6 +69,7 @@ impl ReqHandler {
         ]))
     }
 
+    /// Generate text description from regular expression
     fn railroadtext(&self, params: Vec<Value>) -> Result<Value, Error> {
         // Handle RPC arguments
         let (filename, node) = self.parse_rpc_args(params)?;
@@ -103,7 +105,12 @@ impl RequestHandler for ReqHandler {
         match method.as_str() {
             "regexrailroad" => {
                 info!("RegexRailroad command received");
-                Ok(self.regexrailroad(params).unwrap())
+                match self.regexrailroad(params) {
+                    Ok(x) => Ok(x),
+                    Err(e) => Ok(
+                        Value::Map(vec![(Value::from("error"), Value::from(format!("{}", e)))])
+                    )
+                }
             },
             "regextext" => {
                 info!("RegexText command received");
@@ -118,21 +125,6 @@ impl RequestHandler for ReqHandler {
     }
 }
 
-enum Message {
-    RegexRailroad,
-    RegexText,
-    Unknown(String),
-}
-
-impl From<String> for Message {
-    fn from(event: String) -> Self {
-        match &event[..] {
-            "regexrailroad" => Message::RegexRailroad,
-            "regextext" => Message::RegexText,
-            _ => Message::Unknown(event),
-        }
-    }
-}
 
 fn main() {
     // A layer that logs events to a file.
@@ -154,5 +146,7 @@ fn main() {
     let handler = ReqHandler::new();
     nvim.start_event_loop(Some(Box::new(handler)), None);
 
-    loop {}
+    loop {
+        sleep(std::time::Duration::from_secs(1))
+    }
 }
