@@ -14,6 +14,7 @@ pub enum RegEx {
     Character(CharacterType),
     Anchor(AnchorType),
     Terminal(String),
+    Capture(Option<String>, Box<RegEx>)
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Debug)]
@@ -181,8 +182,31 @@ impl RegExParser {
 
     fn group(&mut self) -> Result<RegEx, Error> {
         if self.peek() == '(' {
-            self.consume('(').unwrap();
-            let a = self.alternation()?;
+            self.consume('(')?;
+            let a = match self.peek() {
+                '?' => {
+                    self.consume('?')?;
+                    if self.peek() == ':' {
+                        // Unnamed capture group
+                        self.consume(':')?;
+                        RegEx::Capture(None, Box::new(self.alternation()?))
+                    }
+                    else if self.peek() == '<' {
+                        // Named capture group
+                        self.consume('<')?;
+                        let mut name = String::new();
+                        while self.more() && self.peek() != '>' {
+                            name = format!("{}{}", name, self.next()?);
+                        }
+                        self.consume('>')?;
+                        RegEx::Capture(Some(name), Box::new(self.alternation()?))
+                    }
+                    else {
+                        return Err(Error::InvalidCharacter('?', self.idx))
+                    }
+                },
+                _ => self.alternation()?
+            };
             self.consume(')').unwrap();
             Ok(a)
         } else if self.peek() == '[' {

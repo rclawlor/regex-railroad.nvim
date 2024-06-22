@@ -158,6 +158,7 @@ impl TextRenderer {
                 _ => Err(Error::InvalidParsing),
             },
             RegEx::Terminal(a) => Ok(format!("'{}'", a)),
+            RegEx::Capture(name, a) => panic!()
         }
     }
 

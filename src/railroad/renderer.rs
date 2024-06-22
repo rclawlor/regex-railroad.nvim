@@ -744,7 +744,8 @@ impl RailroadRenderer {
                     characters.push(Self::render_character(character)?);
                 }
                 Ok(Box::new(Stack { invert, characters }))
-            }
+            },
+            RegEx::Capture(name, a) => panic!()
         }
     }
 
