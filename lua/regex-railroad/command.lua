@@ -31,7 +31,7 @@ end
 ---
 --- @param filename string name of current file
 --- @param text string text containing regular expression
---- @return table 
+--- @return table
 local function regex_text(filename, text)
     local response = vim.api.nvim_call_function(
         "rpcrequest",
