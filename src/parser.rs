@@ -39,6 +39,7 @@ pub enum MetaCharacter {
     Word(bool),
     Digit(bool),
     Whitespace(bool),
+    Any
 }
 
 #[derive(Eq, PartialEq, Debug)]
@@ -252,8 +253,10 @@ impl RegExParser {
                 },
                 _ => Ok(RegEx::Terminal(String::from("")))
             }
-        }
-        else {
+        } else if self.peek() == '.' {
+            self.consume('.')?;
+            Ok(RegEx::Character(CharacterType::Meta(MetaCharacter::Any)))
+        } else {
             let mut string = String::from("");
             while self.more() && !SPECIAL_CHARS.contains(&self.peek()) {
                 let fmt = STRING_FORMAT.get(&self.language).expect("Language is supported");

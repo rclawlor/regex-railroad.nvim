@@ -811,7 +811,7 @@ impl RailroadRenderer {
                         b
                     },
                     CharacterType::Meta(_) => {
-                        return Ok(Box::new(Terminal { text: Self::render_character(a)? }))
+                        return Ok(Box::new(Anchor { text: Self::render_character(a)? }))
                     }
                     _ => return Err(Error::InvalidParsing)
                 };
@@ -849,6 +849,7 @@ impl RailroadRenderer {
                     MetaCharacter::Word(m) => Ok(format!("{}Word", if *m { "" } else { "Non-" })),
                     MetaCharacter::Digit(m) => Ok(format!("{}Digit", if *m { "" } else { "Non-" })),
                     MetaCharacter::Whitespace(m) => Ok(format!("{}Whitespace", if *m { "" } else { "Non-" })),
+                    MetaCharacter::Any => Ok(String::from("Any"))
                 }
             }
             _ => Err(Error::InvalidParsing),
