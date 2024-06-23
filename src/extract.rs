@@ -6,11 +6,17 @@ use crate::error::Error;
 
 
 #[derive(Debug)]
-struct StringFormat {
+pub struct StringFormat {
     string_character: Vec<String>,
-    _escape_character: String,
+    escape_character: char,
     literal_string_start: Option<Vec<String>>,
     literal_string_end: Option<Vec<String>>,
+}
+
+impl StringFormat {
+    pub fn escape_char(&self) -> char {
+        self.escape_character
+    }
 }
 
 #[derive(Clone, Eq, Hash, PartialEq, Debug)]
@@ -45,16 +51,16 @@ impl Language {
 
 lazy_static! {
     /// Mapping of file extension to the language's string format
-    static ref STRING_FORMAT: HashMap<Language, StringFormat> = HashMap::from([
+    pub static ref STRING_FORMAT: HashMap<Language, StringFormat> = HashMap::from([
         (Language::Python, StringFormat {
                 string_character: ["\""].iter().map(|x| x.to_string()).collect(),
-                _escape_character: "\\".to_string(),
+                escape_character: '\\',
                 literal_string_start: Some(["r\""].iter().map(|x| x.to_string()).collect()),
                 literal_string_end: Some(["\""].iter().map(|x| x.to_string()).collect()),
         }),
         (Language::Rust, StringFormat {
                 string_character: ["\""].iter().map(|x| x.to_string()).collect(),
-                _escape_character: "\\".to_string(),
+                escape_character: '\\',
                 literal_string_start: Some(["r\""].iter().map(|x| x.to_string()).collect()),
                 literal_string_end: Some(["\""].iter().map(|x| x.to_string()).collect()),
         })

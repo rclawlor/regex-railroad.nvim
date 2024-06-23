@@ -1,4 +1,4 @@
-use crate::{error::Error, extract::Language};
+use crate::{error::Error, extract::{Language, STRING_FORMAT}};
 use lazy_static::lazy_static;
 use tracing::info;
 
@@ -220,7 +220,7 @@ impl RegExParser {
             let a = self.character()?;
             self.consume(']').unwrap();
             Ok(RegEx::Character(a))
-        } else if SPECIAL_CHARS.contains(&self.peek()) {
+        } else if self.peek() == '^' || self.peek() == '$' {
             match self.peek() {
                 '^' => {
                     self.consume('^')?;
@@ -236,6 +236,10 @@ impl RegExParser {
         else {
             let mut string = String::from("");
             while self.more() && !SPECIAL_CHARS.contains(&self.peek()) {
+                let fmt = STRING_FORMAT.get(&self.language).expect("Language is supported");
+                if self.peek() == fmt.escape_char() {
+                    self.consume(fmt.escape_char())?;
+                }
                 string = format!("{}{}", string, self.next()?);
             }
             Ok(RegEx::Terminal(string))
@@ -323,9 +327,8 @@ impl RegExParser {
             }
         };
         if self.peek() == '-' {
-            self.consume('-')?;
-            if self.peek() == ']' {
-                Ok(Box::new(CharacterType::Terminal(']')))
+            if self.peek_n(1) == Some(']') {
+                Ok(Box::new(c))
             } else {
                 Ok(Box::new(CharacterType::Between(
                     Box::new(c),
@@ -340,6 +343,11 @@ impl RegExParser {
     /// Check what the next character is
     fn peek(&self) -> char {
         self.text.chars().nth(self.idx).unwrap()
+    }
+
+    /// Check n characters ahead
+    fn peek_n(&self, n: usize) -> Option<char> {
+        self.text.chars().nth(self.idx + n)
     }
 
     /// 'Consume' char c from the text
