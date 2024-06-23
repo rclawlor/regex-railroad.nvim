@@ -14,6 +14,7 @@ pub enum RegEx {
     Character(CharacterType),
     Anchor(AnchorType),
     Terminal(String),
+    Capture(Option<String>, usize, Box<RegEx>)
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Debug)]
@@ -43,6 +44,7 @@ pub enum AnchorType {
 pub struct RegExParser {
     text: String,
     idx: usize,
+    capture_group: usize
 }
 
 impl RegExParser {
@@ -51,6 +53,7 @@ impl RegExParser {
         RegExParser {
             text: text.to_string(),
             idx: 0,
+            capture_group: 0
         }
     }
 
@@ -181,8 +184,33 @@ impl RegExParser {
 
     fn group(&mut self) -> Result<RegEx, Error> {
         if self.peek() == '(' {
-            self.consume('(').unwrap();
-            let a = self.alternation()?;
+            self.consume('(')?;
+            let a = match self.peek() {
+                '?' => {
+                    self.consume('?')?;
+                    if self.peek() == ':' {
+                        // Unnamed capture group
+                        self.consume(':')?;
+                        self.capture_group += 1;
+                        RegEx::Capture(None, self.capture_group, Box::new(self.alternation()?))
+                    }
+                    else if self.peek() == '<' {
+                        // Named capture group
+                        self.consume('<')?;
+                        let mut name = String::new();
+                        while self.more() && self.peek() != '>' {
+                            name = format!("{}{}", name, self.next()?);
+                        }
+                        self.consume('>')?;
+                        self.capture_group += 1;
+                        RegEx::Capture(Some(name), self.capture_group, Box::new(self.alternation()?))
+                    }
+                    else {
+                        return Err(Error::InvalidCharacter('?', self.idx))
+                    }
+                },
+                _ => self.alternation()?
+            };
             self.consume(')').unwrap();
             Ok(a)
         } else if self.peek() == '[' {

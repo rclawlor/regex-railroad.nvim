@@ -158,6 +158,16 @@ impl TextRenderer {
                 _ => Err(Error::InvalidParsing),
             },
             RegEx::Terminal(a) => Ok(format!("'{}'", a)),
+            RegEx::Capture(name, group, a) => {
+                Ok(format!("CAPTURE GROUP {}\n{}",
+                    if let Some(n) = name {
+                        n.clone()
+                    } else {
+                        format!("{}", group)
+                    },
+                    Self::render_text_element(a, text, highlight)?
+                ))
+            }
         }
     }
 

@@ -10,6 +10,7 @@ pub enum Error {
     FileType(Language),
     UnsupportedLanguage(Language),
     InvalidString(Language, String),
+    InvalidCharacter(char, usize),
     InvalidParsing,
 }
 
@@ -28,6 +29,7 @@ impl std::fmt::Display for Error {
             Self::FileType(a) => write!(f, "Unsupported file type {}", a),
             Self::UnsupportedLanguage(a) => write!(f, "Unsupported language {}", a),
             Self::InvalidString(lang, string) => write!(f, "Invalid {} string {}", lang, string),
+            Self::InvalidCharacter(c, idx) => write!(f, "Character {} invalid in index {}", c, idx),
             Self::InvalidParsing => write!(f, "Invalid parsing"),
         }
     }
