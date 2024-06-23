@@ -660,8 +660,7 @@ impl Draw for Stack {
 
 /// A 'Capture' group
 ///
-///       <Name>
-///  ╭╌╌╌╌╌╌╌╌╌╌╌╌╌╌╮
+///  ╭╌╌╌╌ Name ╌╌╌╌╮
 ///  ┆ ┌──────────┐ ┆
 ///  ┼─┤   Node   ├─┼
 ///  ┆ └──────────┘ ┆
@@ -670,11 +669,11 @@ impl Draw for Stack {
 #[derive(Debug)]
 pub struct Capture<N> {
     inner: N,
-    name: Option<String>
+    name: String
 }
 
 impl<N> Capture<N> {
-    pub fn new(inner: N, name: Option<String>) -> Self {
+    pub fn new(inner: N, name: String) -> Self {
         Self { inner, name }
     }
 }
@@ -684,19 +683,11 @@ where
     N: Draw,
 {
     fn entry_height(&self) -> usize {
-        if self.name.is_some() {
-            self.inner.entry_height() + 2
-        } else {
-            self.inner.entry_height() + 1
-        }
+        self.inner.entry_height() + 1
     }
 
     fn height(&self) -> usize {
-        if self.name.is_some() {
-            self.inner.height() + 3
-        } else {
-            self.inner.height() + 2
-        }
+        self.inner.height() + 1
     }
 
     fn width(&self) -> usize {
@@ -719,9 +710,14 @@ where
             }
         }
         let len_full = diagram[0].chars().count() - 2;
-        diagram.insert(0, format!("{}{}{}",
+        let len_name = self.name.chars().count();
+        let left_pad = (len_full - len_name) / 2;
+        let right_pad = len_full - len_name - left_pad;
+        diagram.insert(0, format!("{}{}{}{}{}",
             sym::C_TL_RND,
-            repeat(sym::L_HORZ_D, len_full),
+            repeat(sym::L_HORZ_D, left_pad),
+            self.name,
+            repeat(sym::L_HORZ_D, right_pad),
             sym::C_TR_RND
         ));
 
@@ -822,9 +818,16 @@ impl RailroadRenderer {
                 }
                 Ok(Box::new(Stack { invert, characters }))
             },
-            RegEx::Capture(name, a) => Ok(
+            RegEx::Capture(name, group, a) => Ok(
                 Box::new(
-                    Capture { inner: Self::generate_diagram_element(a)?, name: name.clone() }
+                    Capture {
+                        inner: Self::generate_diagram_element(a)?,
+                        name: if let Some(n) = name {
+                            n.clone()
+                        } else {
+                            format!("Group {}", group)
+                        }
+                    }
                 )
             )
         }

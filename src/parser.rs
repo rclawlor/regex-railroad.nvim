@@ -14,7 +14,7 @@ pub enum RegEx {
     Character(CharacterType),
     Anchor(AnchorType),
     Terminal(String),
-    Capture(Option<String>, Box<RegEx>)
+    Capture(Option<String>, usize, Box<RegEx>)
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Debug)]
@@ -44,6 +44,7 @@ pub enum AnchorType {
 pub struct RegExParser {
     text: String,
     idx: usize,
+    capture_group: usize
 }
 
 impl RegExParser {
@@ -52,6 +53,7 @@ impl RegExParser {
         RegExParser {
             text: text.to_string(),
             idx: 0,
+            capture_group: 0
         }
     }
 
@@ -189,7 +191,8 @@ impl RegExParser {
                     if self.peek() == ':' {
                         // Unnamed capture group
                         self.consume(':')?;
-                        RegEx::Capture(None, Box::new(self.alternation()?))
+                        self.capture_group += 1;
+                        RegEx::Capture(None, self.capture_group, Box::new(self.alternation()?))
                     }
                     else if self.peek() == '<' {
                         // Named capture group
@@ -199,7 +202,8 @@ impl RegExParser {
                             name = format!("{}{}", name, self.next()?);
                         }
                         self.consume('>')?;
-                        RegEx::Capture(Some(name), Box::new(self.alternation()?))
+                        self.capture_group += 1;
+                        RegEx::Capture(Some(name), self.capture_group, Box::new(self.alternation()?))
                     }
                     else {
                         return Err(Error::InvalidCharacter('?', self.idx))
