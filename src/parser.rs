@@ -31,6 +31,14 @@ pub enum CharacterType {
     Not(Vec<Box<CharacterType>>),
     Between(Box<CharacterType>, Box<CharacterType>),
     Terminal(char),
+    Meta(MetaCharacter)
+}
+
+#[derive(Eq, PartialEq, Debug)]
+pub enum MetaCharacter {
+    Word(bool),
+    Digit(bool),
+    Whitespace(bool),
 }
 
 #[derive(Eq, PartialEq, Debug)]
@@ -220,6 +228,18 @@ impl RegExParser {
             let a = self.character()?;
             self.consume(']').unwrap();
             Ok(RegEx::Character(a))
+        } else if self.peek() == '\\' {
+            self.consume('\\')?;
+            let character_type = match self.next()? {
+                'w' => CharacterType::Meta(MetaCharacter::Word(true)),
+                'W' => CharacterType::Meta(MetaCharacter::Word(false)),
+                'd' => CharacterType::Meta(MetaCharacter::Digit(true)),
+                'D' => CharacterType::Meta(MetaCharacter::Digit(false)),
+                's' => CharacterType::Meta(MetaCharacter::Whitespace(true)),
+                'S' => CharacterType::Meta(MetaCharacter::Whitespace(false)),
+                other => return Ok(RegEx::Terminal(other.to_string()))
+            };
+            Ok(RegEx::Character(character_type))
         } else if self.peek() == '^' || self.peek() == '$' {
             match self.peek() {
                 '^' => {
@@ -318,6 +338,36 @@ impl RegExParser {
                     }
                 } else {
                     CharacterType::Terminal(capital_a)
+                }
+            },
+            '\\' => {
+                self.consume('\\')?;
+                match self.peek() {
+                    'w' => {
+                        self.consume('w')?;
+                        CharacterType::Meta(MetaCharacter::Word(true))
+                    },
+                    'W' => {
+                        self.consume('W')?;
+                        CharacterType::Meta(MetaCharacter::Word(false))
+                    },
+                    'd' => {
+                        self.consume('d')?;
+                        CharacterType::Meta(MetaCharacter::Digit(true))
+                    },
+                    'D' => {
+                        self.consume('D')?;
+                        CharacterType::Meta(MetaCharacter::Digit(false))
+                    },
+                    's' => {
+                        self.consume('s')?;
+                        CharacterType::Meta(MetaCharacter::Whitespace(true))
+                    },
+                    'S' => {
+                        self.consume('S')?;
+                        CharacterType::Meta(MetaCharacter::Whitespace(false))
+                    },
+                    _ => CharacterType::Terminal('\\')
                 }
             }
             other => {
