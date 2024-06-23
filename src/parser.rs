@@ -1,4 +1,4 @@
-use crate::error::Error;
+use crate::{error::Error, extract::Language};
 use lazy_static::lazy_static;
 use tracing::info;
 
@@ -42,6 +42,7 @@ pub enum AnchorType {
 }
 
 pub struct RegExParser {
+    language: Language,
     text: String,
     idx: usize,
     capture_group: usize
@@ -49,8 +50,9 @@ pub struct RegExParser {
 
 impl RegExParser {
     /// Create new instance of RegExParser
-    pub fn new(text: &String) -> RegExParser {
+    pub fn new(language: Language, text: &String) -> RegExParser {
         RegExParser {
+            language,
             text: text.to_string(),
             idx: 0,
             capture_group: 0
@@ -366,14 +368,14 @@ impl RegExParser {
 
 #[cfg(test)]
 mod test {
-    use crate::parser::{
+    use crate::{extract::Language, parser::{
         RegEx::{Alternation, Element, Repetition, Terminal},
         RegExParser, RepetitionType,
-    };
+    }};
 
     #[test]
     fn test_simple_regex() {
-        let mut parser = RegExParser::new(&"a|b".to_string());
+        let mut parser = RegExParser::new(Language::Rust, &"a|b".to_string());
         assert_eq!(
             parser.parse().unwrap(),
             Alternation(vec![
@@ -382,7 +384,7 @@ mod test {
             ])
         );
 
-        let mut parser = RegExParser::new(&"a*".to_string());
+        let mut parser = RegExParser::new(Language::Rust, &"a*".to_string());
         assert_eq!(
             parser.parse().unwrap(),
             Element(vec![Box::new(Repetition(
@@ -394,7 +396,7 @@ mod test {
 
     #[test]
     fn test_moderate_regex() {
-        let mut parser = RegExParser::new(&"(a|b)+".to_string());
+        let mut parser = RegExParser::new(Language::Rust, &"(a|b)+".to_string());
         assert_eq!(
             parser.parse().unwrap(),
             Element(vec![Box::new(Repetition(
@@ -409,7 +411,7 @@ mod test {
 
     #[test]
     fn test_hard_regex() {
-        let mut parser = RegExParser::new(&"a{8}".to_string());
+        let mut parser = RegExParser::new(Language::Rust, &"a{8}".to_string());
         assert_eq!(
             parser.parse().unwrap(),
             Element(vec![Box::new(Repetition(
@@ -417,7 +419,7 @@ mod test {
                 Box::new(Terminal('a'.to_string()))
             ))])
         );
-        let mut parser = RegExParser::new(&"a{5,}".to_string());
+        let mut parser = RegExParser::new(Language::Rust, &"a{5,}".to_string());
         assert_eq!(
             parser.parse().unwrap(),
             Element(vec![Box::new(Repetition(
@@ -426,7 +428,7 @@ mod test {
             ))])
         );
 
-        let mut parser = RegExParser::new(&"a{1,10}".to_string());
+        let mut parser = RegExParser::new(Language::Rust, &"a{1,10}".to_string());
         assert_eq!(
             parser.parse().unwrap(),
             Element(vec![Box::new(Repetition(

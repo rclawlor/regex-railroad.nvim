@@ -28,7 +28,7 @@ impl Display for Language {
 }
 
 impl Language {
-    fn from_filename(filename: &str) -> Language {
+    pub fn from_filename(filename: &str) -> Language {
         match filename.split('.').last() {
             Some(extension) => {
                 info!("Found file extension '.{}'", extension);
@@ -110,8 +110,7 @@ impl RegexExtractor {
     }
 
     /// Check if text is a regular expression based on language
-    pub fn get_regex<'a>(&'a self, filename: &str, text: &'a str) -> Result<String, Error> {
-        let language = Language::from_filename(filename);
+    pub fn get_regex<'a>(&'a self, language: &Language, text: &'a str) -> Result<String, Error> {
         let string_format = self.get_string_format(&language)?;
 
         // Iterate through line and check for literal string
