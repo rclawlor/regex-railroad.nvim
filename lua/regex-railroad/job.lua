@@ -15,9 +15,9 @@ M.jobid = nil
 function M.attach(filename)
     if binary == nil then
         if config.opts.dev then
-            binary = consts.dev_binary_location
+            binary = consts.dev_binary_location()
         else
-            binary = consts.binary_location
+            binary = consts.binary_location()
         end
     end
 
