@@ -6,17 +6,51 @@ on:
 name: Upload Release
 
 jobs:
-  upload-release:
+  upload-release-linux:
     permissions: write-all
-    name: Upload Release
+    name: Upload Release Linux
     runs-on: ubuntu-latest
     steps:
         - uses: actions/checkout@v4
         - name: Build
-          run: cargo build --release --verbose
+          run: |
+            cargo build --release --verbose
+            mv target/release/regex-railroad target/release/regex-railroad-linux
         - name: Release
           uses: softprops/action-gh-release@v2
           with:
             files: |
-              target/release/regex-railroad
+              target/release/regex-railroad-linux
+
+  upload-release-macos:
+    permissions: write-all
+    name: Upload Release Mac OS
+    runs-on: macos-latest
+    steps:
+        - uses: actions/checkout@v4
+        - name: Build
+          run: |
+            cargo build --release --verbose
+            mv target/release/regex-railroad target/release/regex-railroad-macos
+        - name: Release
+          uses: softprops/action-gh-release@v2
+          with:
+            files: |
+              target/release/regex-railroad-macos
+
+  upload-release-windows:
+    permissions: write-all
+    name: Upload Release Windows
+    runs-on: windows-latest
+    steps:
+        - uses: actions/checkout@v4
+        - name: Build
+          run: |
+            cargo build --release --verbose
+            mv target/release/regex-railroad.exe target/release/regex-railroad-windows.exe
+        - name: Release
+          uses: softprops/action-gh-release@v2
+          with:
+            files: |
+              target/release/regex-railroad-windows.exe
 
