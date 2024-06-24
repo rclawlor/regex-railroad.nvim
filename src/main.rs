@@ -17,7 +17,6 @@ pub mod extract;
 pub mod parser;
 pub mod railroad;
 pub mod text;
-pub mod test;
 
 
 struct ReqHandler {

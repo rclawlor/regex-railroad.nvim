@@ -23,6 +23,7 @@ impl StringFormat {
 pub enum Language {
     Python,
     Rust,
+    Javascript,
     Unknown(String),
     None,
 }
@@ -41,6 +42,7 @@ impl Language {
                 match extension {
                     "py" => Language::Python,
                     "rs" => Language::Rust,
+                    "js" => Language::Javascript,
                     _ => Language::Unknown(extension.to_string()),
                 }
             }
@@ -63,6 +65,12 @@ lazy_static! {
                 escape_character: '\\',
                 literal_string_start: Some(["r\""].iter().map(|x| x.to_string()).collect()),
                 literal_string_end: Some(["\""].iter().map(|x| x.to_string()).collect()),
+        }),
+        (Language::Javascript, StringFormat {
+                string_character: ["\""].iter().map(|x| x.to_string()).collect(),
+                escape_character: '\\',
+                literal_string_start: None,
+                literal_string_end: None,
         })
     ]);
 }
