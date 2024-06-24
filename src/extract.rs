@@ -125,7 +125,7 @@ impl RegexExtractor {
 
     /// Check if text is a regular expression based on language
     pub fn get_regex<'a>(&'a self, language: &Language, text: &'a str) -> Result<String, Error> {
-        let string_format = self.get_string_format(&language)?;
+        let string_format = self.get_string_format(language)?;
 
         // Iterate through line and check for literal string
         if string_format.literal_string_start.is_some()
