@@ -1,7 +1,7 @@
 use std::iter;
 use tracing::info;
 
-use crate::parser::CharacterType;
+use crate::parser::{CharacterType, MetaCharacter};
 use crate::{
     error::Error,
     parser::{AnchorType, RegEx, RepetitionType},
@@ -810,6 +810,9 @@ impl RailroadRenderer {
                         invert = true;
                         b
                     },
+                    CharacterType::Meta(_) => {
+                        return Ok(Box::new(Anchor { text: Self::render_character(a)? }))
+                    }
                     _ => return Err(Error::InvalidParsing)
                 };
                 let mut characters: Vec<String> = Vec::new();
@@ -841,6 +844,14 @@ impl RailroadRenderer {
                 Self::render_character(b)?
             )),
             CharacterType::Terminal(a) => Ok(format!("{}", a)),
+            CharacterType::Meta(a) => {
+                match a {
+                    MetaCharacter::Word(m) => Ok(format!("{}Word", if *m { "" } else { "Non-" })),
+                    MetaCharacter::Digit(m) => Ok(format!("{}Digit", if *m { "" } else { "Non-" })),
+                    MetaCharacter::Whitespace(m) => Ok(format!("{}Whitespace", if *m { "" } else { "Non-" })),
+                    MetaCharacter::Any => Ok(String::from("Any"))
+                }
+            }
             _ => Err(Error::InvalidParsing),
         }
     }

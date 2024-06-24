@@ -6,7 +6,7 @@ use tracing_subscriber::{self, layer::SubscriberExt};
 
 use crate::{
     error::Error,
-    extract::RegexExtractor,
+    extract::{Language, RegexExtractor},
     parser::RegExParser,
     railroad::renderer::RailroadRenderer,
     text::TextRenderer
@@ -17,7 +17,6 @@ pub mod extract;
 pub mod parser;
 pub mod railroad;
 pub mod text;
-pub mod test;
 
 
 struct ReqHandler {
@@ -46,10 +45,11 @@ impl ReqHandler {
         let (filename, node) = self.parse_rpc_args(params)?;
 
         // Obtain regular expression from received text
-        let regex = self.regex_railroad.get_regex(&filename, &node)?;
+        let language = Language::from_filename(&filename);
+        let regex = self.regex_railroad.get_regex(&language, &node)?;
 
         // Parse and render regular expression
-        let mut parser = RegExParser::new(&regex);
+        let mut parser = RegExParser::new(language, &regex);
         let parsed_regex = parser.parse()?;
         info!("Parsed regular expression: {:?}", parsed_regex);
 
@@ -75,10 +75,11 @@ impl ReqHandler {
         let (filename, node) = self.parse_rpc_args(params)?;
 
         // Obtain regular expression from received text
-        let regex = self.regex_railroad.get_regex(&filename, &node)?;
+        let language = Language::from_filename(&filename);
+        let regex = self.regex_railroad.get_regex(&language, &node)?;
 
         // Parse and render regular expression
-        let mut parser = RegExParser::new(&regex);
+        let mut parser = RegExParser::new(language, &regex);
         let parsed_regex = parser.parse()?;
         info!("Parsed regular expression: {:?}", parsed_regex);
         let (text, _highlight) = TextRenderer::render_text(&parsed_regex)?;

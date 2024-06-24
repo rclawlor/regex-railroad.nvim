@@ -1,4 +1,4 @@
-use crate::error::Error;
+use crate::{error::Error, extract::{Language, STRING_FORMAT}};
 use lazy_static::lazy_static;
 use tracing::info;
 
@@ -31,6 +31,15 @@ pub enum CharacterType {
     Not(Vec<Box<CharacterType>>),
     Between(Box<CharacterType>, Box<CharacterType>),
     Terminal(char),
+    Meta(MetaCharacter)
+}
+
+#[derive(Eq, PartialEq, Debug)]
+pub enum MetaCharacter {
+    Word(bool),
+    Digit(bool),
+    Whitespace(bool),
+    Any
 }
 
 #[derive(Eq, PartialEq, Debug)]
@@ -42,6 +51,7 @@ pub enum AnchorType {
 }
 
 pub struct RegExParser {
+    language: Language,
     text: String,
     idx: usize,
     capture_group: usize
@@ -49,8 +59,9 @@ pub struct RegExParser {
 
 impl RegExParser {
     /// Create new instance of RegExParser
-    pub fn new(text: &String) -> RegExParser {
+    pub fn new(language: Language, text: &String) -> RegExParser {
         RegExParser {
+            language,
             text: text.to_string(),
             idx: 0,
             capture_group: 0
@@ -218,7 +229,19 @@ impl RegExParser {
             let a = self.character()?;
             self.consume(']').unwrap();
             Ok(RegEx::Character(a))
-        } else if SPECIAL_CHARS.contains(&self.peek()) {
+        } else if self.peek() == '\\' {
+            self.consume('\\')?;
+            let character_type = match self.next()? {
+                'w' => CharacterType::Meta(MetaCharacter::Word(true)),
+                'W' => CharacterType::Meta(MetaCharacter::Word(false)),
+                'd' => CharacterType::Meta(MetaCharacter::Digit(true)),
+                'D' => CharacterType::Meta(MetaCharacter::Digit(false)),
+                's' => CharacterType::Meta(MetaCharacter::Whitespace(true)),
+                'S' => CharacterType::Meta(MetaCharacter::Whitespace(false)),
+                other => return Ok(RegEx::Terminal(other.to_string()))
+            };
+            Ok(RegEx::Character(character_type))
+        } else if self.peek() == '^' || self.peek() == '$' {
             match self.peek() {
                 '^' => {
                     self.consume('^')?;
@@ -230,10 +253,16 @@ impl RegExParser {
                 },
                 _ => Ok(RegEx::Terminal(String::from("")))
             }
-        }
-        else {
+        } else if self.peek() == '.' {
+            self.consume('.')?;
+            Ok(RegEx::Character(CharacterType::Meta(MetaCharacter::Any)))
+        } else {
             let mut string = String::from("");
             while self.more() && !SPECIAL_CHARS.contains(&self.peek()) {
+                let fmt = STRING_FORMAT.get(&self.language).expect("Language is supported");
+                if self.peek() == fmt.escape_char() {
+                    self.consume(fmt.escape_char())?;
+                }
                 string = format!("{}{}", string, self.next()?);
             }
             Ok(RegEx::Terminal(string))
@@ -313,6 +342,36 @@ impl RegExParser {
                 } else {
                     CharacterType::Terminal(capital_a)
                 }
+            },
+            '\\' => {
+                self.consume('\\')?;
+                match self.peek() {
+                    'w' => {
+                        self.consume('w')?;
+                        CharacterType::Meta(MetaCharacter::Word(true))
+                    },
+                    'W' => {
+                        self.consume('W')?;
+                        CharacterType::Meta(MetaCharacter::Word(false))
+                    },
+                    'd' => {
+                        self.consume('d')?;
+                        CharacterType::Meta(MetaCharacter::Digit(true))
+                    },
+                    'D' => {
+                        self.consume('D')?;
+                        CharacterType::Meta(MetaCharacter::Digit(false))
+                    },
+                    's' => {
+                        self.consume('s')?;
+                        CharacterType::Meta(MetaCharacter::Whitespace(true))
+                    },
+                    'S' => {
+                        self.consume('S')?;
+                        CharacterType::Meta(MetaCharacter::Whitespace(false))
+                    },
+                    _ => CharacterType::Terminal('\\')
+                }
             }
             other => {
                 info!("Character {}", other);
@@ -321,9 +380,8 @@ impl RegExParser {
             }
         };
         if self.peek() == '-' {
-            self.consume('-')?;
-            if self.peek() == ']' {
-                Ok(Box::new(CharacterType::Terminal(']')))
+            if self.peek_n(1) == Some(']') {
+                Ok(Box::new(c))
             } else {
                 Ok(Box::new(CharacterType::Between(
                     Box::new(c),
@@ -338,6 +396,11 @@ impl RegExParser {
     /// Check what the next character is
     fn peek(&self) -> char {
         self.text.chars().nth(self.idx).unwrap()
+    }
+
+    /// Check n characters ahead
+    fn peek_n(&self, n: usize) -> Option<char> {
+        self.text.chars().nth(self.idx + n)
     }
 
     /// 'Consume' char c from the text
@@ -366,14 +429,14 @@ impl RegExParser {
 
 #[cfg(test)]
 mod test {
-    use crate::parser::{
+    use crate::{extract::Language, parser::{
         RegEx::{Alternation, Element, Repetition, Terminal},
         RegExParser, RepetitionType,
-    };
+    }};
 
     #[test]
     fn test_simple_regex() {
-        let mut parser = RegExParser::new(&"a|b".to_string());
+        let mut parser = RegExParser::new(Language::Rust, &"a|b".to_string());
         assert_eq!(
             parser.parse().unwrap(),
             Alternation(vec![
@@ -382,7 +445,7 @@ mod test {
             ])
         );
 
-        let mut parser = RegExParser::new(&"a*".to_string());
+        let mut parser = RegExParser::new(Language::Rust, &"a*".to_string());
         assert_eq!(
             parser.parse().unwrap(),
             Element(vec![Box::new(Repetition(
@@ -394,7 +457,7 @@ mod test {
 
     #[test]
     fn test_moderate_regex() {
-        let mut parser = RegExParser::new(&"(a|b)+".to_string());
+        let mut parser = RegExParser::new(Language::Rust, &"(a|b)+".to_string());
         assert_eq!(
             parser.parse().unwrap(),
             Element(vec![Box::new(Repetition(
@@ -409,7 +472,7 @@ mod test {
 
     #[test]
     fn test_hard_regex() {
-        let mut parser = RegExParser::new(&"a{8}".to_string());
+        let mut parser = RegExParser::new(Language::Rust, &"a{8}".to_string());
         assert_eq!(
             parser.parse().unwrap(),
             Element(vec![Box::new(Repetition(
@@ -417,7 +480,7 @@ mod test {
                 Box::new(Terminal('a'.to_string()))
             ))])
         );
-        let mut parser = RegExParser::new(&"a{5,}".to_string());
+        let mut parser = RegExParser::new(Language::Rust, &"a{5,}".to_string());
         assert_eq!(
             parser.parse().unwrap(),
             Element(vec![Box::new(Repetition(
@@ -426,7 +489,7 @@ mod test {
             ))])
         );
 
-        let mut parser = RegExParser::new(&"a{1,10}".to_string());
+        let mut parser = RegExParser::new(Language::Rust, &"a{1,10}".to_string());
         assert_eq!(
             parser.parse().unwrap(),
             Element(vec![Box::new(Repetition(

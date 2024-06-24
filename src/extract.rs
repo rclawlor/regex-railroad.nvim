@@ -6,17 +6,24 @@ use crate::error::Error;
 
 
 #[derive(Debug)]
-struct StringFormat {
+pub struct StringFormat {
     string_character: Vec<String>,
-    _escape_character: String,
+    escape_character: char,
     literal_string_start: Option<Vec<String>>,
     literal_string_end: Option<Vec<String>>,
+}
+
+impl StringFormat {
+    pub fn escape_char(&self) -> char {
+        self.escape_character
+    }
 }
 
 #[derive(Clone, Eq, Hash, PartialEq, Debug)]
 pub enum Language {
     Python,
     Rust,
+    Javascript,
     Unknown(String),
     None,
 }
@@ -28,13 +35,14 @@ impl Display for Language {
 }
 
 impl Language {
-    fn from_filename(filename: &str) -> Language {
+    pub fn from_filename(filename: &str) -> Language {
         match filename.split('.').last() {
             Some(extension) => {
                 info!("Found file extension '.{}'", extension);
                 match extension {
                     "py" => Language::Python,
                     "rs" => Language::Rust,
+                    "js" => Language::Javascript,
                     _ => Language::Unknown(extension.to_string()),
                 }
             }
@@ -45,18 +53,24 @@ impl Language {
 
 lazy_static! {
     /// Mapping of file extension to the language's string format
-    static ref STRING_FORMAT: HashMap<Language, StringFormat> = HashMap::from([
+    pub static ref STRING_FORMAT: HashMap<Language, StringFormat> = HashMap::from([
         (Language::Python, StringFormat {
                 string_character: ["\""].iter().map(|x| x.to_string()).collect(),
-                _escape_character: "\\".to_string(),
+                escape_character: '\\',
                 literal_string_start: Some(["r\""].iter().map(|x| x.to_string()).collect()),
                 literal_string_end: Some(["\""].iter().map(|x| x.to_string()).collect()),
         }),
         (Language::Rust, StringFormat {
                 string_character: ["\""].iter().map(|x| x.to_string()).collect(),
-                _escape_character: "\\".to_string(),
+                escape_character: '\\',
                 literal_string_start: Some(["r\""].iter().map(|x| x.to_string()).collect()),
                 literal_string_end: Some(["\""].iter().map(|x| x.to_string()).collect()),
+        }),
+        (Language::Javascript, StringFormat {
+                string_character: ["\""].iter().map(|x| x.to_string()).collect(),
+                escape_character: '\\',
+                literal_string_start: None,
+                literal_string_end: None,
         })
     ]);
 }
@@ -110,9 +124,8 @@ impl RegexExtractor {
     }
 
     /// Check if text is a regular expression based on language
-    pub fn get_regex<'a>(&'a self, filename: &str, text: &'a str) -> Result<String, Error> {
-        let language = Language::from_filename(filename);
-        let string_format = self.get_string_format(&language)?;
+    pub fn get_regex<'a>(&'a self, language: &Language, text: &'a str) -> Result<String, Error> {
+        let string_format = self.get_string_format(language)?;
 
         // Iterate through line and check for literal string
         if string_format.literal_string_start.is_some()
