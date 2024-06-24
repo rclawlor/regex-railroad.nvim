@@ -164,9 +164,9 @@ dependencies = [
 
 [[package]]
 name = "rsnvim"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4bca646d32e397481a6439ab0dff7e118863d298b32e82686f34e884b369496f"
+checksum = "d19c890dbddbda5f00dec125c7e7c8127e23b83fea3a6efb575006c87a62c75e"
 dependencies = [
  "rmpv 1.3.0",
 ]
