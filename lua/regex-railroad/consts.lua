@@ -11,7 +11,8 @@ function M.root_directory()
     if vim.fn.has("win32") == 1 then
         config_dir = os.getenv("LOCALAPPDATA")
         return string.format(
-            "%s/nvim-data/lazy/regex-railroad.nvim"
+            "%s/nvim-data/lazy/regex-railroad.nvim",
+            config_dir
         )
     elseif vim.fn.has("linux") == 1 then
         config_dir = os.getenv("XDG_DATA_HOME") or string.format("%s/.local/share", M.home_directory)
