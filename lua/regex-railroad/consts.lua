@@ -10,21 +10,27 @@ function M.root_directory()
     local config_dir
     if vim.fn.has("win32") == 1 then
         config_dir = os.getenv("LOCALAPPDATA")
-    elseif vim.fn.has("linux") ==1 then
-        config_dir = os.getenv("XDG_CONFIG_HOME") or string.format("%s/.config", M.home_directory)
+        return string.format(
+            "%s/nvim-data/lazy/regex-railroad.nvim"
+        )
+    elseif vim.fn.has("linux") == 1 then
+        config_dir = os.getenv("XDG_DATA_HOME") or string.format("%s/.local/share", M.home_directory)
+        return string.format(
+            "%s/nvim/lazy/regex-railroad.nvim",
+            config_dir
+        )
     elseif vim.fn.has("mac") == 1 then
-        config_dir = string.format("%s/.config", M.home_directory)
+        config_dir = os.getenv("XDG_DATA_HOME") or string.format("%s/.local/share", M.home_directory)
+        return string.format(
+            "%s/nvim/lazy/regex-railroad.nvim",
+            config_dir
+        )
     else
         vim.api.nvim_command(
             "echohl ErrorMsg | echo \"OS not recognised - only Linux, Mac and Windows supported\" | echohl None"
         )
         return nil
     end
-
-    return string.format(
-        "%s/nvim/lazy/regex-railroad.nvim",
-        config_dir
-    )
 end
 
 --- Rust binary name
