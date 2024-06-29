@@ -1,6 +1,6 @@
 local M = {
     --- Github release of plugin
-    tag = "v0.0.2",
+    tag = "v0.0.3",
     --- Highlight group used in :RegexText
     highlight = {
         bold = true,

@@ -16,7 +16,7 @@
 -- plugins/regex-railroad.lua:
 return {
     "rclawlor/regex-railroad.nvim",
-    tag = "0.0.2",
+    tag = "0.0.3",
     dependencies = { "nvim-treesitter/nvim-treesitter" }
 }
 ```
@@ -39,7 +39,7 @@ This section explains the available options for configuring `regex-railroad.nvim
 ```lua
 require("regex-railroad").setup({
     --- Github release of plugin
-    tag = "v0.0.2",
+    tag = "v0.0.3",
     --- Highlight group used in :RegexText
     highlight = {
         bold = true,
