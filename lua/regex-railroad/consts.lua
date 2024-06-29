@@ -6,25 +6,74 @@ M.home_directory = string.format(
 )
 
 --- Root directory of plugin
-M.root_directory = string.format(
-    "%s/nvim/lazy/regex-railroad.nvim",
-    os.getenv("XDG_CONFIG_HOME") or string.format("%s/.local/share", M.home_directory)
-)
+function M.root_directory()
+    local config_dir
+    if vim.fn.has("win32") == 1 then
+        config_dir = os.getenv("LOCALAPPDATA")
+    elseif vim.fn.has("linux") ==1 then
+        config_dir = os.getenv("XDG_CONFIG_HOME") or string.format("%s/.config", M.home_directory)
+    elseif vim.fn.has("mac") == 1 then
+        config_dir = string.format("%s/.config", M.home_directory)
+    else
+        vim.api.nvim_command(
+            "echohl ErrorMsg | echo \"OS not recognised - only Linux, Mac and Windows supported\" | echohl None"
+        )
+        return nil
+    end
+
+    return string.format(
+        "%s/nvim/lazy/regex-railroad.nvim",
+        config_dir
+    )
+end
+
+--- Rust binary name
+function M.binary_name()
+    if vim.fn.has("win32") == 1 then
+        return "regex-railroad-windows.exe"
+    elseif vim.fn.has("linux") == 1 then
+        return "regex-railroad-linux"
+    elseif vim.fn.has("mac") == 1 then
+        return "regex-railroad-mac"
+    else
+        vim.api.nvim_command(
+            "echohl ErrorMsg | echo \"OS not recognised - only Linux, Mac and Windows supported\" | echohl None"
+        )
+        return nil
+    end
+end
 
 --- Rust binary location
-M.binary_location = string.format(
-    "%s/regex-railroad",
-    M.root_directory
-)
+function M.binary_location()
+    local binary_name = M.binary_name()
+
+    if binary_name ~= nil then
+        return string.format(
+            "%s/%s",
+            M.root_directory(),
+            binary_name
+        )
+    else
+        return nil
+    end
+end
 
 --- Working directory for development
 M.dev_directory = vim.fn.getcwd()
 
 --- Rust binary location for development
-M.dev_binary_location = string.format(
-    "%s/target/release/regex-railroad",
-    M.dev_directory
-)
+function M.dev_binary_location()
+    local extension = ""
+    if vim.fn.has("win32") == 1 then
+        extension = ".exe"
+    end
+
+    return string.format(
+        "%s/target/debug/regex-railroad%s",
+        M.dev_directory,
+        extension
+    )
+end
 
 --- A mapping of wget error codes to useful user message
 M.wget_errors = {
