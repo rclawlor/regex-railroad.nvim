@@ -119,7 +119,7 @@ dependencies = [
 
 [[package]]
 name = "regex-railroad"
-version = "0.1.0"
+version = "0.0.2"
 dependencies = [
  "lazy_static",
  "neovim-lib",
